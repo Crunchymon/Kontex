@@ -1,0 +1,15 @@
+{
+  "name": "kontex",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.8.0",
+  "scripts": {
+    "build": "corepack pnpm -r build",
+    "typecheck": "corepack pnpm -r typecheck",
+    "test": "corepack pnpm -r test",
+    "lint": "corepack pnpm -r lint"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
