@@ -17,4 +17,3 @@ coverage
 *.pid
 .vscode/
 .idea/
-pnpm-lock.yaml
