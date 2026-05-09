@@ -1,17 +1,35 @@
 import { NextResponse } from "next/server";
+import { auth } from "../../../lib/auth";
 import { callMcpToolServer } from "../../../lib/mcp-server-client";
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.apiKey) {
+    return NextResponse.json(
+      { ok: false, error: { code: "unauthenticated", message: "Sign in required" } },
+      { status: 401 }
+    );
+  }
+
   try {
     const payload = (await req.json()) as { tool: string; input: unknown };
-    const rawResult = (await callMcpToolServer(payload.tool, payload.input)) as {
-      content?: Array<{ type?: string; text?: string }>;
-    };
-    const text = rawResult.content?.find((item) => item.type === "text")?.text ?? "{}";
-    const result = JSON.parse(text);
-    return NextResponse.json({ ok: true, result });
+    if (!payload?.tool) {
+      return NextResponse.json(
+        { ok: false, error: { code: "validation", message: "Missing tool name" } },
+        { status: 400 }
+      );
+    }
+    const result = await callMcpToolServer(payload.tool, payload.input, session.apiKey);
+    return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: { message: error instanceof Error ? error.message : "Unknown error" }
+      },
+      { status: 500 }
+    );
   }
 }

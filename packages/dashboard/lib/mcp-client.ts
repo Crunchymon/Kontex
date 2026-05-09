@@ -1,42 +1,54 @@
-import type { ToolInput, ToolName, ToolOutput } from "../../shared/src";
+import type {
+  GetEntryInput,
+  GetEntryResult,
+  ListPendingInput,
+  ListPendingResult,
+  ListRecentInput,
+  ListRecentResult,
+  ProposeArchiveInput,
+  ProposeArchiveResult,
+  ProposeEditInput,
+  ProposeEditResult,
+  ProposeEntryInput,
+  ProposeEntryResult,
+  QueryContextInput,
+  QueryContextResult,
+  ResolveChangeInput,
+  ResolveChangeResult,
+  ToolName,
+  ToolInputMap,
+  ToolOutputMap
+} from "@kontex/shared";
 
-async function callTool<T extends ToolName>(tool: T, input: ToolInput<T>): Promise<ToolOutput<T>> {
+type Envelope<T> = { ok: true; result: T } | { ok: false; error: { code?: string; message: string; details?: unknown } };
+
+async function call<T extends ToolName>(
+  tool: T,
+  input: ToolInputMap[T]
+): Promise<ToolOutputMap[T]> {
   const res = await fetch("/api/mcp", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tool, input })
   });
-  if (!res.ok) {
-    throw new Error(`MCP call failed (${res.status})`);
+  const body = (await res.json()) as Envelope<ToolOutputMap[T]>;
+  if (!body.ok) {
+    throw new Error(body.error.message ?? `Tool ${tool} failed`);
   }
-  const json = (await res.json()) as { result: ToolOutput<T> };
-  return json.result;
+  return body.result;
 }
 
 export const mcpClient = {
-  readContext(input: ToolInput<"read_context"> = {}) {
-    return callTool("read_context", input);
-  },
-  raisePr(input: ToolInput<"raise_pr">) {
-    return callTool("raise_pr", input);
-  },
-  listPrs() {
-    return callTool("list_prs", {});
-  },
-  mergePr(input: ToolInput<"merge_pr">) {
-    return callTool("merge_pr", input);
-  },
-  closePr(input: ToolInput<"close_pr">) {
-    return callTool("close_pr", input);
-  },
-  getHistory() {
-    return callTool("get_history", {});
-  },
-  async rollbackTo(sha: string) {
-    const snapshot = await callTool("read_context", { sha });
-    return callTool("raise_pr", {
-      proposed_content: snapshot.content,
-      description: `Rollback to ${sha.slice(0, 8)}`
-    });
-  }
+  queryContext: (input: QueryContextInput): Promise<QueryContextResult> =>
+    call("query_context", input),
+  getEntry: (input: GetEntryInput): Promise<GetEntryResult> => call("get_entry", input),
+  listRecent: (input: ListRecentInput): Promise<ListRecentResult> => call("list_recent", input),
+  listPending: (input: ListPendingInput): Promise<ListPendingResult> => call("list_pending", input),
+  proposeEntry: (input: ProposeEntryInput): Promise<ProposeEntryResult> =>
+    call("propose_entry", input),
+  proposeEdit: (input: ProposeEditInput): Promise<ProposeEditResult> => call("propose_edit", input),
+  proposeArchive: (input: ProposeArchiveInput): Promise<ProposeArchiveResult> =>
+    call("propose_archive", input),
+  resolveChange: (input: ResolveChangeInput): Promise<ResolveChangeResult> =>
+    call("resolve_change", input)
 };

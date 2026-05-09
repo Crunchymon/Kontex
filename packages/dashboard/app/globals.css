@@ -2,11 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+
+html {
+  color-scheme: dark;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
-  background: #fafafa;
-  color: #111827;
+  background: #131315;
+  color: #e5e1e4;
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  selection-color: #b0b2ff;
+}
+
+::selection {
+  background: #4d8eff;
+  color: #00285d;
+}
+
+.kontex-icon {
+  font-size: 20px;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.dot-grid {
+  background-image: radial-gradient(circle, #2a2a2c 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.hero-gradient {
+  background: radial-gradient(circle at 50% 0%, rgba(77, 142, 255, 0.15) 0%, rgba(19, 19, 21, 0) 50%);
 }

@@ -1,10 +1,53 @@
-node_modules
-dist
-.next
-coverage
-.turbo
-.DS_Store
-# Environment files (all packages/apps)
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.yarn/cache
+.yarn/install-state.gz
+.yarn/build-state.yml
+
+# -----------------------------------------------------------------------------
+# Build output
+# -----------------------------------------------------------------------------
+dist/
+build/
+out/
+
+# Next.js
+.next/
+.swc/
+
+# Vercel
+.vercel/
+
+# Turbo
+.turbo/
+
+# -----------------------------------------------------------------------------
+# TypeScript incremental + build caches
+# -----------------------------------------------------------------------------
+*.tsbuildinfo
+.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Test + coverage
+# -----------------------------------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+.vitest-cache/
+
+# -----------------------------------------------------------------------------
+# Lint caches
+# -----------------------------------------------------------------------------
+.eslintcache
+.stylelintcache
+
+# -----------------------------------------------------------------------------
+# Environment files (all packages/apps).
+# Real secrets stay local; only the .example placeholders are tracked.
+# -----------------------------------------------------------------------------
 .env
 .env.*
 **/.env
@@ -12,8 +55,54 @@ coverage
 !.env.example
 !**/.env.example
 
-# Local IDE/runtime artifacts
+# -----------------------------------------------------------------------------
+# Logs and runtime
+# -----------------------------------------------------------------------------
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 *.pid
+*.seed
+*.pid.lock
+.cache/
+tmp/
+temp/
+
+# -----------------------------------------------------------------------------
+# Secrets / private keys (defensive — shouldn't be in repo at all)
+# -----------------------------------------------------------------------------
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# -----------------------------------------------------------------------------
+# Editor / IDE
+# -----------------------------------------------------------------------------
 .vscode/
 .idea/
+.cursor/
+*.swp
+*.swo
+*~
+*.code-workspace
+.history/
+.sublime-project
+.sublime-workspace
+
+# -----------------------------------------------------------------------------
+# OS junk
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+ehthumbs.db
+Thumbs.db
+Desktop.ini

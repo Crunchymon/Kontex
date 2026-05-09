@@ -4,6 +4,9 @@
     "jsx": "preserve",
     "allowJs": true,
     "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
     "incremental": true,
     "plugins": [
       {
