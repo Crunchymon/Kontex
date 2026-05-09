@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "../lib/auth";
+import { redirect } from "next/navigation";
 import { Logo } from "../components/Logo";
 import { Icon } from "../components/Icon";
 
@@ -20,8 +21,11 @@ const SAMPLE_CONFIG = `{
 
 export default async function LandingPage() {
   const session = await auth();
-  const ctaHref = session?.user ? "/projects" : "/signin";
-  const ctaLabel = session?.user ? "Open dashboard" : "Sign in with Google";
+  if (session?.user) {
+    return redirect("/overview");
+  }
+  const ctaHref = "/signin";
+  const ctaLabel = "Sign in with Google";
 
   return (
     <div className="min-h-screen flex flex-col">

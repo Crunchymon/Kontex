@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { auth } from "../../lib/auth";
+import { auth } from "../../../lib/auth";
 import { redirect } from "next/navigation";
-import { dashboardStats, listProjectsForUser, recentEntriesForUser } from "../../lib/access";
-import { Icon } from "../../components/Icon";
+import { dashboardStats, listProjectsForUser, recentEntriesForUser } from "../../../lib/access";
+import { Icon } from "../../../components/Icon";
 
 export default async function OverviewPage() {
   const session = await auth();

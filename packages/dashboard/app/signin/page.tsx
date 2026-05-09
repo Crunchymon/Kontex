@@ -5,11 +5,11 @@ import { Icon } from "../../components/Icon";
 
 export default async function SignInPage() {
   const session = await auth();
-  if (session?.user) redirect("/projects");
+  if (session?.user) redirect("/overview");
 
   async function handleSignIn() {
     "use server";
-    await signIn("google", { redirectTo: "/projects" });
+    await signIn("google", { redirectTo: "/overview" });
   }
 
   return (
