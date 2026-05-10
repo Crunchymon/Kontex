@@ -54,21 +54,12 @@ export function Sidebar() {
       </div>
       <div className="p-stack-sm border-t border-outline-variant flex flex-col gap-stack-xs">
         <Link
-          href="/keys"
+          href="/docs"
           className="flex items-center gap-stack-sm px-stack-sm py-1.5 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
         >
           <Icon name="menu_book" className="text-[18px]" />
           <span className="font-label-md text-label-md">Documentation</span>
         </Link>
-        <a
-          href="https://github.com/anthropics/claude-ai-mcp/issues/112"
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-stack-sm px-stack-sm py-1.5 rounded-DEFAULT text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
-        >
-          <Icon name="contact_support" className="text-[18px]" />
-          <span className="font-label-md text-label-md">Claude bridge</span>
-        </a>
       </div>
     </nav>
   );

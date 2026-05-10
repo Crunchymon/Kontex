@@ -3,13 +3,17 @@ import { redirect } from "next/navigation";
 import { Logo } from "../../components/Logo";
 import { Icon } from "../../components/Icon";
 
-export default async function SignInPage() {
+export default async function SignInPage({
+  searchParams
+}: {
+  searchParams?: { next?: string };
+}) {
   const session = await auth();
-  if (session?.user) redirect("/overview");
+  if (session?.user) redirect(searchParams?.next ?? "/overview");
 
   async function handleSignIn() {
     "use server";
-    await signIn("google", { redirectTo: "/overview" });
+    await signIn("google", { redirectTo: searchParams?.next ?? "/overview" });
   }
 
   return (

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { users } from "@kontex/shared/schema";
 import { db } from "./db";
 import { createSessionApiKey, revokeApiKey } from "./api-keys";
+import { claimPendingInvitationsForEmail } from "./invitations";
 
 declare module "next-auth" {
   interface Session {
@@ -34,24 +35,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async signIn({ user }) {
       if (!user.email) return false;
+      const email = user.email.toLowerCase();
 
-      const [existing] = await db().select().from(users).where(eq(users.email, user.email)).limit(1);
+      const [existing] = await db().select().from(users).where(eq(users.email, email)).limit(1);
       if (!existing) {
         await db()
           .insert(users)
           .values({
-            email: user.email,
-            name: user.name ?? user.email
+            email,
+            name: user.name ?? email
           });
+      } else if (existing.email !== email) {
+        await db().update(users).set({ email }).where(eq(users.id, existing.id));
       }
       return true;
     },
     async jwt({ token, user }) {
       const t = token as KontexToken;
       if (user?.email) {
-        const [row] = await db().select().from(users).where(eq(users.email, user.email)).limit(1);
+        const email = user.email.toLowerCase();
+        const [row] = await db().select().from(users).where(eq(users.email, email)).limit(1);
         if (row) {
           t.userId = row.id;
+          await claimPendingInvitationsForEmail(row.id, email);
           const session = await createSessionApiKey(row.id);
           t.apiKey = session.rawKey;
           t.apiKeyId = session.id;

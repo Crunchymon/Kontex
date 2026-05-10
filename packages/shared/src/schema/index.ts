@@ -152,6 +152,30 @@ export const pendingChanges = pgTable(
   })
 );
 
+export const pendingInvitations = pgTable(
+  "pending_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    email: text("email"),
+    token: text("token").unique(),
+    projectRole: text("project_role", { enum: ["admin", "member"] }).notNull(),
+    spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "cascade" }),
+    spaceRole: text("space_role", { enum: ["editor", "reader"] }),
+    invitedBy: uuid("invited_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    acceptedBy: uuid("accepted_by").references(() => users.id, { onDelete: "set null" }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => ({
+    emailIdx: index("pending_invitations_email_idx").on(table.email),
+    tokenIdx: index("pending_invitations_token_idx").on(table.token),
+    projectIdx: index("pending_invitations_project_idx").on(table.projectId)
+  })
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Project = typeof projects.$inferSelect;
@@ -164,6 +188,8 @@ export type NewEntry = typeof entries.$inferInsert;
 export type EntryVersion = typeof entryVersions.$inferSelect;
 export type PendingChange = typeof pendingChanges.$inferSelect;
 export type NewPendingChange = typeof pendingChanges.$inferInsert;
+export type PendingInvitation = typeof pendingInvitations.$inferSelect;
+export type NewPendingInvitation = typeof pendingInvitations.$inferInsert;
 
 export type ProjectRole = "admin" | "member";
 export type SpaceRole = "editor" | "reader";

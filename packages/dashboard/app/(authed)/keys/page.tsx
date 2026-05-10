@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "../../../lib/auth";
 import { listUserApiKeys } from "../../../lib/access";
@@ -17,9 +18,12 @@ export default async function KeysPage() {
       <header className="border-b border-outline-variant pb-stack-sm">
         <h1 className="font-headline-xl text-headline-xl text-on-surface tracking-tight">API Keys</h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Generate a key for each LLM client (Claude Desktop, ChatGPT, Cursor). Keys are shown once and stored as a
-          hash. Revoke any key here to immediately cut off access.
+          Generate a key for Claude Desktop. Keys are shown once and stored as a hash. Revoke any key here to
+          immediately cut off access.
         </p>
+        <Link href="/docs" className="inline-block mt-2 text-primary hover:underline font-label-sm text-label-sm">
+          Need setup help? Read the documentation
+        </Link>
       </header>
 
       <ApiKeyForm baseUrl={baseUrl} />

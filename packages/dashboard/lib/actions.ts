@@ -1,8 +1,10 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import {
+  pendingInvitations,
   projectMembers,
   projects,
   spaceMembers,
@@ -76,23 +78,109 @@ export async function inviteMember(formData: FormData) {
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
-  const role = String(formData.get("role") ?? "member") as "admin" | "member";
-  if (!projectId || !email) throw new Error("Project and email required");
+  const projectRole = String(formData.get("role") ?? "member") as "admin" | "member";
+  const spaceId = String(formData.get("space_id") ?? "");
+  const spaceRole = (String(formData.get("space_role") ?? "editor") as "editor" | "reader") || "editor";
+  if (!projectId || !email || !spaceId) throw new Error("Project, email, and space are required");
 
   await requireProjectAdmin(userId, projectId);
 
   const [target] = await db().select().from(users).where(eq(users.email, email)).limit(1);
   if (!target) {
-    throw new Error("User has not signed in to Kontex yet — ask them to sign in once, then re-invite");
+    await db().insert(pendingInvitations).values({
+      projectId,
+      email,
+      projectRole,
+      invitedBy: userId,
+      spaceId,
+      spaceRole
+    });
+    revalidatePath(`/projects/${projectId}`);
+    revalidatePath(`/projects/${projectId}/permissions`);
+    return {
+      status: "queued" as const,
+      message: "Invite saved. They will be added after they sign in to Kontex."
+    };
   }
 
   await db()
     .insert(projectMembers)
-    .values({ userId: target.id, projectId, projectRole: role })
+    .values({ userId: target.id, projectId, projectRole })
     .onConflictDoNothing();
+  await db()
+    .insert(spaceMembers)
+    .values({ userId: target.id, projectId, spaceId, spaceRole })
+    .onConflictDoUpdate({
+      target: [spaceMembers.userId, spaceMembers.spaceId],
+      set: { spaceRole, updatedAt: new Date() }
+    });
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/projects/${projectId}/permissions`);
+  return {
+    status: "added" as const,
+    message: "Member added to the project and space."
+  };
+}
+
+export type CreateInviteLinkResult = {
+  id: string;
+  inviteUrl: string;
+};
+
+export async function createInviteLink(formData: FormData): Promise<CreateInviteLinkResult> {
+  const userId = await requireUserId();
+  const projectId = String(formData.get("project_id") ?? "");
+  const spaceId = String(formData.get("space_id") ?? "");
+  const spaceRole = (String(formData.get("space_role") ?? "editor") as "editor" | "reader") || "editor";
+  const role = (String(formData.get("role") ?? "member") as "admin" | "member") || "member";
+  const expiresAtRaw = String(formData.get("expires_at") ?? "");
+  if (!projectId || !spaceId) throw new Error("Project and space are required");
+
+  await requireProjectAdmin(userId, projectId);
+
+  const token = randomBytes(24).toString("base64url");
+  const [invitation] = await db()
+    .insert(pendingInvitations)
+    .values({
+      projectId,
+      token,
+      projectRole: role,
+      invitedBy: userId,
+      spaceId,
+      spaceRole,
+      expiresAt: expiresAtRaw ? new Date(expiresAtRaw) : null
+    })
+    .returning({ id: pendingInvitations.id });
+
+  const baseUrl =
+    process.env.NEXTAUTH_URL ?? process.env.AUTH_URL ?? process.env.MCP_PUBLIC_URL ?? "http://localhost:3000";
+  const inviteUrl = `${baseUrl.replace(/\/$/, "")}/invite/${token}`;
+
+  revalidatePath(`/projects/${projectId}`);
+  return { id: invitation.id, inviteUrl };
+}
+
+export async function revokeInviteLink(formData: FormData) {
+  const userId = await requireUserId();
+  const inviteId = String(formData.get("invite_id") ?? "");
+  const projectId = String(formData.get("project_id") ?? "");
+  if (!inviteId || !projectId) throw new Error("Invite and project are required");
+
+  await requireProjectAdmin(userId, projectId);
+
+  await db()
+    .update(pendingInvitations)
+    .set({ revokedAt: new Date() })
+    .where(
+      and(
+        eq(pendingInvitations.id, inviteId),
+        eq(pendingInvitations.projectId, projectId),
+        isNull(pendingInvitations.acceptedAt),
+        isNull(pendingInvitations.revokedAt)
+      )
+    );
+  revalidatePath(`/projects/${projectId}`);
 }
 
 export async function setSpaceRole(formData: FormData) {
@@ -132,6 +220,32 @@ export async function setProjectRole(formData: FormData) {
   if (!projectId || !targetUserId || !role) throw new Error("Missing arguments");
 
   await requireProjectAdmin(userId, projectId);
+
+  const [project] = await db().select().from(projects).where(eq(projects.id, projectId)).limit(1);
+  if (!project) throw new Error("Project not found");
+
+  if (targetUserId === project.createdBy && (role === "remove" || role === "member")) {
+    throw new Error("Cannot modify the project creator's role");
+  }
+
+  const [targetMembership] = await db()
+    .select({ projectRole: projectMembers.projectRole })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.userId, targetUserId), eq(projectMembers.projectId, projectId)))
+    .limit(1);
+  if (!targetMembership) throw new Error("Target user is not a member of this project");
+
+  const targetIsAdmin = targetMembership.projectRole === "admin";
+  if (targetIsAdmin && (role === "remove" || role === "member")) {
+    const [adminCountRow] = await db()
+      .select({ count: count() })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.projectRole, "admin")));
+    const adminCount = Number(adminCountRow?.count ?? 0);
+    if (adminCount <= 1) {
+      throw new Error("Project must keep at least one admin");
+    }
+  }
 
   if (role === "remove") {
     await db()

@@ -88,6 +88,18 @@ export async function requireProjectMember(
   return { projectRole: row.projectRole as ProjectRole };
 }
 
+export async function requireProjectAdmin(
+  db: Database,
+  userId: string,
+  projectId: string
+): Promise<{ projectRole: ProjectRole }> {
+  const role = await requireProjectMember(db, userId, projectId);
+  if (role.projectRole !== "admin") {
+    throw new KontexError("insufficient_role", "This action requires project admin role");
+  }
+  return role;
+}
+
 export async function requireSpaceMember(
   db: Database,
   userId: string,
@@ -106,6 +118,23 @@ export async function requireSpaceMember(
     throw new KontexError("not_space_member", "Space does not belong to the supplied project");
   }
   return { spaceRole: row.spaceRole as SpaceRole };
+}
+
+export async function getSpaceRole(
+  db: Database,
+  userId: string,
+  spaceId: string,
+  projectId: string
+): Promise<SpaceRole | null> {
+  const [row] = await db
+    .select({ spaceRole: spaceMembers.spaceRole, projectId: spaceMembers.projectId })
+    .from(spaceMembers)
+    .where(and(eq(spaceMembers.userId, userId), eq(spaceMembers.spaceId, spaceId)))
+    .limit(1);
+  if (!row || row.projectId !== projectId) {
+    return null;
+  }
+  return row.spaceRole as SpaceRole;
 }
 
 export async function requireSpaceEditor(

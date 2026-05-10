@@ -67,6 +67,46 @@ export const resolveChangeInput = z.object({
   reason: z.string().optional()
 });
 
+export const listProjectsInput = z.object({});
+
+export const listSpacesInput = z.object({
+  project_id: uuid()
+});
+
+export const listMembersInput = z.object({
+  project_id: uuid()
+});
+
+export const createProjectInput = z.object({
+  name: z.string().min(1).max(200)
+});
+
+export const createSpaceInput = z.object({
+  project_id: uuid(),
+  name: z.string().min(1).max(200)
+});
+
+export const inviteMemberInput = z.object({
+  project_id: uuid(),
+  email: z.string().email(),
+  project_role: z.enum(["admin", "member"]).default("member"),
+  space_id: uuid(),
+  space_role: z.enum(["editor", "reader"]).default("editor")
+});
+
+export const setProjectRoleInput = z.object({
+  project_id: uuid(),
+  user_id: uuid(),
+  role: z.enum(["admin", "member", "remove"])
+});
+
+export const setSpaceRoleInput = z.object({
+  project_id: uuid(),
+  space_id: uuid(),
+  user_id: uuid(),
+  role: z.enum(["editor", "reader", "none"])
+});
+
 export type QueryContextInput = z.infer<typeof queryContextInput>;
 export type GetEntryInput = z.infer<typeof getEntryInput>;
 export type ListRecentInput = z.infer<typeof listRecentInput>;
@@ -75,6 +115,14 @@ export type ProposeEntryInput = z.infer<typeof proposeEntryInput>;
 export type ProposeEditInput = z.infer<typeof proposeEditInput>;
 export type ProposeArchiveInput = z.infer<typeof proposeArchiveInput>;
 export type ResolveChangeInput = z.infer<typeof resolveChangeInput>;
+export type ListProjectsInput = z.infer<typeof listProjectsInput>;
+export type ListSpacesInput = z.infer<typeof listSpacesInput>;
+export type ListMembersInput = z.infer<typeof listMembersInput>;
+export type CreateProjectInput = z.infer<typeof createProjectInput>;
+export type CreateSpaceInput = z.infer<typeof createSpaceInput>;
+export type InviteMemberInput = z.input<typeof inviteMemberInput>;
+export type SetProjectRoleInput = z.infer<typeof setProjectRoleInput>;
+export type SetSpaceRoleInput = z.infer<typeof setSpaceRoleInput>;
 
 export type QueryContextResult = {
   results: Array<{
@@ -134,24 +182,49 @@ export type ListPendingResult = {
   }>;
 };
 
-export type ProposeEntryResult = {
-  change_id: string;
-  status: "pending";
-};
+export type ProposeEntryResult =
+  | {
+      change_id: string;
+      status: "pending";
+    }
+  | {
+      status: "resolved";
+      resolved: true;
+      decision: "approve";
+      entry_id: string | null;
+    };
 
-export type ProposeEditResult = {
-  change_id: string;
-  status: "pending";
-  entry_title: string | null;
-  summary: string;
-};
+export type ProposeEditResult =
+  | {
+      change_id: string;
+      status: "pending";
+      entry_title: string | null;
+      summary: string;
+    }
+  | {
+      status: "resolved";
+      resolved: true;
+      decision: "approve";
+      entry_id: string | null;
+      entry_title: string | null;
+      summary: string;
+    };
 
-export type ProposeArchiveResult = {
-  change_id: string;
-  status: "pending";
-  entry_title: string | null;
-  summary: string;
-};
+export type ProposeArchiveResult =
+  | {
+      change_id: string;
+      status: "pending";
+      entry_title: string | null;
+      summary: string;
+    }
+  | {
+      status: "resolved";
+      resolved: true;
+      decision: "approve";
+      entry_id: string | null;
+      entry_title: string | null;
+      summary: string;
+    };
 
 export type ResolveChangeResult = {
   resolved: true;
@@ -159,7 +232,68 @@ export type ResolveChangeResult = {
   entry_id: string | null;
 };
 
+export type ListProjectsResult = {
+  projects: Array<{
+    project_id: string;
+    name: string;
+    project_role: "admin" | "member";
+    created_at: string;
+  }>;
+};
+
+export type ListSpacesResult = {
+  spaces: Array<{
+    space_id: string;
+    name: string;
+    space_role: "editor" | "reader" | null;
+  }>;
+};
+
+export type ListMembersResult = {
+  members: Array<{
+    user_id: string;
+    email: string;
+    name: string;
+    project_role: "admin" | "member";
+    space_roles: Record<string, "editor" | "reader">;
+  }>;
+};
+
+export type CreateProjectResult = {
+  project_id: string;
+  name: string;
+};
+
+export type CreateSpaceResult = {
+  space_id: string;
+  project_id: string;
+  name: string;
+};
+
+export type InviteMemberResult = {
+  status: "added" | "queued";
+  message: string;
+};
+
+export type SetProjectRoleResult = {
+  updated: true;
+  role: "admin" | "member" | "remove";
+};
+
+export type SetSpaceRoleResult = {
+  updated: true;
+  role: "editor" | "reader" | "none";
+};
+
 export type ToolName =
+  | "list_projects"
+  | "list_spaces"
+  | "list_members"
+  | "create_project"
+  | "create_space"
+  | "invite_member"
+  | "set_project_role"
+  | "set_space_role"
   | "query_context"
   | "get_entry"
   | "list_recent"
@@ -170,6 +304,14 @@ export type ToolName =
   | "resolve_change";
 
 export type ToolInputMap = {
+  list_projects: ListProjectsInput;
+  list_spaces: ListSpacesInput;
+  list_members: ListMembersInput;
+  create_project: CreateProjectInput;
+  create_space: CreateSpaceInput;
+  invite_member: InviteMemberInput;
+  set_project_role: SetProjectRoleInput;
+  set_space_role: SetSpaceRoleInput;
   query_context: QueryContextInput;
   get_entry: GetEntryInput;
   list_recent: ListRecentInput;
@@ -181,6 +323,14 @@ export type ToolInputMap = {
 };
 
 export type ToolOutputMap = {
+  list_projects: ListProjectsResult;
+  list_spaces: ListSpacesResult;
+  list_members: ListMembersResult;
+  create_project: CreateProjectResult;
+  create_space: CreateSpaceResult;
+  invite_member: InviteMemberResult;
+  set_project_role: SetProjectRoleResult;
+  set_space_role: SetSpaceRoleResult;
   query_context: QueryContextResult;
   get_entry: GetEntryResult;
   list_recent: ListRecentResult;

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { generateApiKey } from "../../../lib/actions";
 import { Icon } from "../../../components/Icon";
@@ -113,11 +114,9 @@ export function ApiKeyForm({ baseUrl }: Props) {
               </button>
               <pre className="overflow-auto whitespace-pre">{claudeSnippet}</pre>
             </div>
-            <p className="font-label-sm text-label-sm text-on-surface-variant mt-stack-sm">
-              For ChatGPT, just paste the URL <code className="font-mono">{baseUrl.replace(/\/$/, "")}/mcp</code> and
-              the bearer token <code className="font-mono">{generated.rawKey.slice(0, 16)}…</code> into the developer
-              connector.
-            </p>
+            <Link href="/docs" className="inline-block font-label-sm text-label-sm text-primary hover:underline mt-stack-sm">
+              Full setup guide for macOS, Windows, and Linux
+            </Link>
           </div>
         </div>
       ) : null}

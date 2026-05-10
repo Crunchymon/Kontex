@@ -1,7 +1,8 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import {
   apiKeys,
   entries,
+  pendingInvitations,
   pendingChanges,
   projectMembers,
   projects,
@@ -120,6 +121,29 @@ export async function listUserApiKeys(userId: string) {
     .from(apiKeys)
     .where(eq(apiKeys.userId, userId))
     .orderBy(desc(apiKeys.createdAt));
+}
+
+export async function listActiveInviteLinks(projectId: string) {
+  return db()
+    .select({
+      id: pendingInvitations.id,
+      token: pendingInvitations.token,
+      projectRole: pendingInvitations.projectRole,
+      spaceId: pendingInvitations.spaceId,
+      spaceRole: pendingInvitations.spaceRole,
+      expiresAt: pendingInvitations.expiresAt,
+      createdAt: pendingInvitations.createdAt
+    })
+    .from(pendingInvitations)
+    .where(
+      and(
+        eq(pendingInvitations.projectId, projectId),
+        isNotNull(pendingInvitations.token),
+        isNull(pendingInvitations.acceptedAt),
+        isNull(pendingInvitations.revokedAt)
+      )
+    )
+    .orderBy(desc(pendingInvitations.createdAt));
 }
 
 export async function dashboardStats(userId: string) {

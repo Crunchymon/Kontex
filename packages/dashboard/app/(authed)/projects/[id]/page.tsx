@@ -3,15 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "../../../../lib/auth";
 import {
   getProjectForUser,
+  listActiveInviteLinks,
   listMembersForProject,
   listSpacesForProject
 } from "../../../../lib/access";
-import {
-  createSpace,
-  inviteMember,
-  setProjectRole
-} from "../../../../lib/actions";
+import { createSpace, setProjectRole } from "../../../../lib/actions";
 import { Icon } from "../../../../components/Icon";
+import { InvitePanel } from "./InvitePanel";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -20,9 +18,10 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const proj = await getProjectForUser(session.user.id, params.id);
   if (!proj) notFound();
 
-  const [spaces, members] = await Promise.all([
+  const [spaces, members, links] = await Promise.all([
     listSpacesForProject(params.id),
-    listMembersForProject(params.id)
+    listMembersForProject(params.id),
+    listActiveInviteLinks(params.id)
   ]);
 
   const isAdmin = proj.projectRole === "admin";
@@ -110,27 +109,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <span className="font-mono text-mono-sm text-on-surface-variant">{members.length}</span>
           </header>
           {isAdmin ? (
-            <form action={inviteMember} className="flex flex-wrap gap-stack-sm p-stack-md border-b border-outline-variant">
-              <input type="hidden" name="project_id" value={params.id} />
-              <input
-                name="email"
-                type="email"
-                required
-                placeholder="teammate@school.edu"
-                className="flex-1 min-w-[200px] bg-surface-container-lowest border border-outline-variant text-on-surface font-body-md text-body-md rounded-DEFAULT px-3 py-2 focus:outline-none focus:border-primary"
-              />
-              <select
-                name="role"
-                defaultValue="member"
-                className="bg-surface-container-lowest border border-outline-variant text-on-surface font-body-md text-body-md rounded-DEFAULT px-3 py-2 focus:outline-none focus:border-primary"
-              >
-                <option value="member">member</option>
-                <option value="admin">admin</option>
-              </select>
-              <button className="bg-on-surface text-surface px-3 py-2 rounded-DEFAULT font-label-md text-label-md hover:bg-on-surface-variant transition-colors flex items-center gap-2">
-                <Icon name="person_add" className="text-[14px]" /> Invite
-              </button>
-            </form>
+            <InvitePanel
+              projectId={params.id}
+              spaces={spaces}
+              links={links.map((link) => ({
+                ...link,
+                createdAt: link.createdAt.toISOString(),
+                expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null
+              }))}
+            />
           ) : null}
           {members.length === 0 ? (
             <p className="px-stack-md py-stack-md font-body-md text-body-md text-on-surface-variant">

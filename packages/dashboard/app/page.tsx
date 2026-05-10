@@ -40,9 +40,9 @@ export default async function LandingPage() {
           <a className="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors" href="#how">
             How it works
           </a>
-          <a className="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors" href="#mcp">
-            MCP
-          </a>
+          <Link className="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors" href="/docs">
+            Setup guide
+          </Link>
           <a className="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors" href="#access">
             Access control
           </a>
@@ -67,7 +67,7 @@ export default async function LandingPage() {
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-12">
             One ledger of vector-searchable knowledge per project. Every change goes through a human approval gate.
-            Reachable from any LLM that speaks MCP — Claude, ChatGPT, Cursor.
+            Reachable from Claude Desktop through MCP.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <Link
@@ -77,12 +77,12 @@ export default async function LandingPage() {
               {ctaLabel}
               <Icon name="arrow_forward" className="text-[16px]" />
             </Link>
-            <a
-              href="#mcp"
+            <Link
+              href="/docs"
               className="bg-surface text-on-surface px-6 py-3 rounded-DEFAULT font-label-md text-label-md hover:bg-surface-container-high transition-colors border border-outline-variant flex items-center gap-2"
             >
-              <Icon name="menu_book" className="text-[16px]" /> Read the bridge config
-            </a>
+              <Icon name="menu_book" className="text-[16px]" /> Read setup docs
+            </Link>
           </div>
 
           <div className="mt-20 w-full max-w-3xl bg-[#0e0e10] rounded-xl border border-outline-variant overflow-hidden shadow-2xl flex flex-col text-left">
@@ -100,7 +100,7 @@ export default async function LandingPage() {
 
         <section
           id="how"
-          className="w-full max-w-container-max px-gutter py-24 border-b border-outline-variant flex flex-col items-center"
+          className="scroll-mt-14 w-full max-w-container-max px-gutter py-24 border-b border-outline-variant flex flex-col items-center"
         >
           <div className="text-center mb-16">
             <h2 className="font-headline-lg text-headline-lg text-on-surface mb-4">Three pieces, one mechanic</h2>
@@ -130,15 +130,14 @@ export default async function LandingPage() {
 
         <section
           id="mcp"
-          className="w-full max-w-container-max px-gutter py-24 border-b border-outline-variant"
+          className="scroll-mt-14 w-full max-w-container-max px-gutter py-24 border-b border-outline-variant"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-stack-lg items-start">
             <div>
               <h2 className="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Use it from any LLM</h2>
               <p className="font-body-lg text-body-lg text-on-surface-variant">
-                ChatGPT&apos;s developer-mode connector accepts a URL plus a bearer token directly. Claude&apos;s native
-                Custom Connectors UI does not yet support static bearer tokens, so Claude Desktop talks to Kontex
-                through the
+                Claude&apos;s native Custom Connectors UI does not yet support static bearer tokens, so Claude Desktop
+                talks to Kontex through the
                 <code className="font-mono mx-1 px-1 bg-surface-container-low rounded border border-outline-variant">
                   mcp-remote
                 </code>
@@ -146,7 +145,11 @@ export default async function LandingPage() {
                 <code className="font-mono mx-1 px-1 bg-surface-container-low rounded border border-outline-variant">
                   ~/Library/Application Support/Claude/claude_desktop_config.json
                 </code>
-                and restart Claude.
+                and restart Claude Desktop. Full setup steps for macOS, Windows, and Linux are in the
+                <Link href="/docs" className="text-primary hover:underline ml-1">
+                  documentation guide
+                </Link>
+                .
               </p>
               <ul className="font-body-md text-body-md text-on-surface-variant mt-stack-md flex flex-col gap-stack-xs">
                 <li className="flex items-start gap-2">
@@ -181,7 +184,7 @@ export default async function LandingPage() {
 
         <section
           id="access"
-          className="w-full max-w-container-max px-gutter py-24 border-b border-outline-variant"
+          className="scroll-mt-14 w-full max-w-container-max px-gutter py-24 border-b border-outline-variant"
         >
           <div className="text-center mb-16">
             <h2 className="font-headline-lg text-headline-lg text-on-surface mb-4">Access control, not access by convention</h2>

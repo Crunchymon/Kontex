@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import {
   pendingChanges,
   proposeEntryInput,
@@ -7,18 +8,21 @@ import {
   type ProposeEntryResult
 } from "@kontex/shared";
 import type { Database } from "../db.js";
+import type { EmbeddingClient } from "../embeddings.js";
 import { requireProjectMember, requireSpaceEditor, type AuthContext } from "../auth.js";
 import { KontexError } from "../errors.js";
+import { applyApproval } from "./_apply.js";
 
 export const proposeEntryTool = {
   name: "propose_entry",
   description:
-    "Submit a new entry for human approval. Content is hard-capped at 1500 characters; longer submissions are rejected so the caller can split them into smaller, single-concept entries.",
+    "Submit a new entry. Space editors auto-apply the change in this same call; callers without editor role are rejected. Content is hard-capped at 1500 characters.",
   inputSchema: proposeEntryInput
 };
 
 export async function handleProposeEntry(
   db: Database,
+  embeddings: EmbeddingClient,
   ctx: AuthContext,
   input: ProposeEntryInput
 ): Promise<ProposeEntryResult> {
@@ -47,8 +51,10 @@ export async function handleProposeEntry(
     })
     .returning({ id: pendingChanges.id });
 
-  return {
-    change_id: row.id,
-    status: "pending"
-  };
+  const [change] = await db.select().from(pendingChanges).where(eq(pendingChanges.id, row.id)).limit(1);
+  if (!change) {
+    throw new KontexError("internal", "Pending change not found after creation");
+  }
+  const approved = await applyApproval(db, embeddings, change, ctx.user.id, "Auto-approved by editor");
+  return { status: "resolved", resolved: true, decision: "approve", entry_id: approved.entryId };
 }

@@ -101,13 +101,6 @@ Alternatively, drop the `entries` table and re-run `pnpm --filter @kontex/mcp-se
 
 ## Connecting an LLM client
 
-### ChatGPT (developer mode)
-
-Generate a key on the dashboard `Keys` page and paste:
-
-- URL: `https://your-mcp-host/mcp`
-- Authorization: `Bearer kx_live_...`
-
 ### Claude Desktop
 
 Claude's native Custom Connectors UI does **not** yet accept static bearer tokens — it only supports OAuth shapes. The standard workaround is the [`mcp-remote`](https://github.com/geelen/mcp-remote) stdio bridge.
