@@ -7,7 +7,7 @@ import { PendingClient } from "./PendingClient";
 
 export default async function PendingPage({ searchParams }: { searchParams?: { project?: string } }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/signin");
+  if (!session?.user?.id) redirect("/sign-in");
 
   const projects = await listProjectsForUser(session.user.id);
   if (projects.length === 0) {

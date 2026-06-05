@@ -44,3 +44,10 @@ body {
 .hero-gradient {
   background: radial-gradient(circle at 50% 0%, rgba(77, 142, 255, 0.15) 0%, rgba(19, 19, 21, 0) 50%);
 }
+
+.auth{
+  display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+}

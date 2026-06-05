@@ -1,7 +1,7 @@
 export type ErrorCode =
-  | "missing_api_key"
-  | "invalid_api_key"
-  | "revoked_api_key"
+  | "missing_auth"
+  | "invalid_token"
+  | "user_not_found"
   | "not_project_member"
   | "not_space_member"
   | "insufficient_role"
@@ -25,10 +25,10 @@ export class KontexError extends Error {
 
 function errorStatus(code: ErrorCode): number {
   switch (code) {
-    case "missing_api_key":
-    case "invalid_api_key":
-    case "revoked_api_key":
+    case "missing_auth":
+    case "invalid_token":
       return 401;
+    case "user_not_found":
     case "not_project_member":
     case "not_space_member":
     case "insufficient_role":

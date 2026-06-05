@@ -7,7 +7,7 @@ import { Icon } from "../../../components/Icon";
 
 export default async function ProjectsPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/signin");
+  if (!session?.user?.id) redirect("/sign-in");
   const projects = await listProjectsForUser(session.user.id);
 
   return (

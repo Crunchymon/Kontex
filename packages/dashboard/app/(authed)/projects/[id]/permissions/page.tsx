@@ -10,7 +10,7 @@ import { Icon } from "../../../../../components/Icon";
 
 export default async function PermissionsPage({ params }: { params: { id: string } }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/signin");
+  if (!session?.user?.id) redirect("/sign-in");
 
   const proj = await getProjectForUser(session.user.id, params.id);
   if (!proj) notFound();

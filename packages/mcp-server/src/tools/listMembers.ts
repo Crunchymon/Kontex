@@ -13,8 +13,10 @@ import { requireProjectMember, type AuthContext } from "../auth.js";
 
 export const listMembersTool = {
   name: "list_members",
+  title: "List Members",
   description: "List project members with project role and per-space roles.",
-  inputSchema: listMembersInput
+  inputSchema: listMembersInput,
+  readOnlyHint: true
 };
 
 export async function handleListMembers(

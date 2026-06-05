@@ -28,13 +28,13 @@ export const getEntryInput = z.object({
   entry_id: uuid()
 });
 
-export const listRecentInput = z.object({
+export const listRecentEntriesInput = z.object({
   project_id: uuid(),
   space_id: uuid(),
   limit: z.number().int().positive().max(100).optional()
 });
 
-export const listPendingInput = z.object({
+export const listProposalsInput = z.object({
   project_id: uuid()
 });
 
@@ -60,10 +60,15 @@ export const proposeArchiveInput = z.object({
   rationale: z.string().min(1)
 });
 
-export const resolveChangeInput = z.object({
+export const approveChangeInput = z.object({
   project_id: uuid(),
-  change_id: uuid(),
-  decision: z.enum(["approve", "reject"]),
+  proposal_id: uuid(),
+  reason: z.string().optional()
+});
+
+export const rejectChangeInput = z.object({
+  project_id: uuid(),
+  proposal_id: uuid(),
   reason: z.string().optional()
 });
 
@@ -109,12 +114,13 @@ export const setSpaceRoleInput = z.object({
 
 export type QueryContextInput = z.infer<typeof queryContextInput>;
 export type GetEntryInput = z.infer<typeof getEntryInput>;
-export type ListRecentInput = z.infer<typeof listRecentInput>;
-export type ListPendingInput = z.infer<typeof listPendingInput>;
+export type ListRecentEntriesInput = z.infer<typeof listRecentEntriesInput>;
+export type ListProposalsInput = z.infer<typeof listProposalsInput>;
 export type ProposeEntryInput = z.infer<typeof proposeEntryInput>;
 export type ProposeEditInput = z.infer<typeof proposeEditInput>;
 export type ProposeArchiveInput = z.infer<typeof proposeArchiveInput>;
-export type ResolveChangeInput = z.infer<typeof resolveChangeInput>;
+export type ApproveChangeInput = z.infer<typeof approveChangeInput>;
+export type RejectChangeInput = z.infer<typeof rejectChangeInput>;
 export type ListProjectsInput = z.infer<typeof listProjectsInput>;
 export type ListSpacesInput = z.infer<typeof listSpacesInput>;
 export type ListMembersInput = z.infer<typeof listMembersInput>;
@@ -157,7 +163,7 @@ export type EntryDetail = {
 
 export type GetEntryResult = EntryDetail;
 
-export type ListRecentResult = {
+export type ListRecentEntriesResult = {
   entries: Array<{
     entry_id: string;
     title: string | null;
@@ -168,68 +174,67 @@ export type ListRecentResult = {
   }>;
 };
 
-export type ListPendingResult = {
-  changes: Array<{
-    change_id: string;
-    type: "new" | "edit" | "archive";
+export type ListProposalsResult = {
+  proposals: Array<{
+    proposal_id: string;
+    branch_id: string;
     space_id: string;
-    entry_id: string | null;
-    proposed_title: string | null;
-    proposed_content: string | null;
-    rationale: string;
-    proposed_by: string;
+    status: "pending" | "approved" | "rejected";
     created_at: string;
+    changes: Array<{
+      entry_id: string | null;
+      type: "new" | "edit" | "archive";
+      proposed_title: string | null;
+      proposed_content: string | null;
+    }>;
   }>;
 };
 
 export type ProposeEntryResult =
   | {
-      change_id: string;
+      proposal_id: string;
       status: "pending";
     }
   | {
-      status: "resolved";
+      status: "approved";
       resolved: true;
-      decision: "approve";
       entry_id: string | null;
     };
 
 export type ProposeEditResult =
   | {
-      change_id: string;
+      proposal_id: string;
       status: "pending";
       entry_title: string | null;
-      summary: string;
     }
   | {
-      status: "resolved";
+      status: "approved";
       resolved: true;
-      decision: "approve";
       entry_id: string | null;
       entry_title: string | null;
-      summary: string;
     };
 
 export type ProposeArchiveResult =
   | {
-      change_id: string;
+      proposal_id: string;
       status: "pending";
       entry_title: string | null;
-      summary: string;
     }
   | {
-      status: "resolved";
+      status: "approved";
       resolved: true;
-      decision: "approve";
       entry_id: string | null;
       entry_title: string | null;
-      summary: string;
     };
 
-export type ResolveChangeResult = {
+export type ApproveChangeResult = {
   resolved: true;
-  decision: "approve" | "reject";
-  entry_id: string | null;
+  status: "approved";
+};
+
+export type RejectChangeResult = {
+  resolved: true;
+  status: "rejected";
 };
 
 export type ListProjectsResult = {
@@ -296,12 +301,13 @@ export type ToolName =
   | "set_space_role"
   | "query_context"
   | "get_entry"
-  | "list_recent"
-  | "list_pending"
+  | "list_recent_entries"
+  | "list_proposals"
   | "propose_entry"
   | "propose_edit"
   | "propose_archive"
-  | "resolve_change";
+  | "approve_change"
+  | "reject_change";
 
 export type ToolInputMap = {
   list_projects: ListProjectsInput;
@@ -314,12 +320,13 @@ export type ToolInputMap = {
   set_space_role: SetSpaceRoleInput;
   query_context: QueryContextInput;
   get_entry: GetEntryInput;
-  list_recent: ListRecentInput;
-  list_pending: ListPendingInput;
+  list_recent_entries: ListRecentEntriesInput;
+  list_proposals: ListProposalsInput;
   propose_entry: ProposeEntryInput;
   propose_edit: ProposeEditInput;
   propose_archive: ProposeArchiveInput;
-  resolve_change: ResolveChangeInput;
+  approve_change: ApproveChangeInput;
+  reject_change: RejectChangeInput;
 };
 
 export type ToolOutputMap = {
@@ -333,12 +340,13 @@ export type ToolOutputMap = {
   set_space_role: SetSpaceRoleResult;
   query_context: QueryContextResult;
   get_entry: GetEntryResult;
-  list_recent: ListRecentResult;
-  list_pending: ListPendingResult;
+  list_recent_entries: ListRecentEntriesResult;
+  list_proposals: ListProposalsResult;
   propose_entry: ProposeEntryResult;
   propose_edit: ProposeEditResult;
   propose_archive: ProposeArchiveResult;
-  resolve_change: ResolveChangeResult;
+  approve_change: ApproveChangeResult;
+  reject_change: RejectChangeResult;
 };
 
 export type ToolInput<T extends ToolName> = ToolInputMap[T];

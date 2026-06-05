@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import {
-  pendingChanges,
+  branches,
+  branchEntries,
+  proposals,
   proposeEntryInput,
   MAX_ENTRY_CHARS,
   TOO_LONG_ERROR,
@@ -9,15 +11,16 @@ import {
 } from "@kontex/shared";
 import type { Database } from "../db.js";
 import type { EmbeddingClient } from "../embeddings.js";
-import { requireProjectMember, requireSpaceEditor, type AuthContext } from "../auth.js";
+import { requireProjectMember, getSpaceRole, type AuthContext } from "../auth.js";
 import { KontexError } from "../errors.js";
 import { applyApproval } from "./_apply.js";
 
 export const proposeEntryTool = {
   name: "propose_entry",
-  description:
-    "Submit a new entry. Space editors auto-apply the change in this same call; callers without editor role are rejected. Content is hard-capped at 1500 characters.",
-  inputSchema: proposeEntryInput
+  title: "Propose Entry",
+  description: "Submit a new entry to the knowledge base. Content is hard-capped at 1500 characters.",
+  inputSchema: proposeEntryInput,
+  destructiveHint: true
 };
 
 export async function handleProposeEntry(
@@ -35,26 +38,43 @@ export async function handleProposeEntry(
   }
 
   await requireProjectMember(db, ctx.user.id, input.project_id);
-  await requireSpaceEditor(db, ctx.user.id, input.space_id, input.project_id);
+  const spaceRole = await getSpaceRole(db, ctx.user.id, input.space_id, input.project_id);
+  if (!spaceRole) {
+    throw new KontexError("not_space_member", "User has no role in this space");
+  }
 
-  const [row] = await db
-    .insert(pendingChanges)
+  // Create branch
+  const [branch] = await db
+    .insert(branches)
     .values({
-      projectId: input.project_id,
       spaceId: input.space_id,
-      type: "new",
-      proposedContent: input.content,
-      proposedTitle: input.title ?? null,
-      proposedBy: ctx.user.id,
-      rationale: input.rationale,
+      name: input.rationale,
+      createdBy: ctx.user.id,
+      status: "open"
+    })
+    .returning();
+
+  // Create branch entry
+  await db.insert(branchEntries).values({
+    branchId: branch.id,
+    type: "new",
+    proposedContent: input.content,
+    proposedTitle: input.title ?? null
+  });
+
+  // Create proposal
+  const [proposal] = await db
+    .insert(proposals)
+    .values({
+      branchId: branch.id,
       status: "pending"
     })
-    .returning({ id: pendingChanges.id });
+    .returning();
 
-  const [change] = await db.select().from(pendingChanges).where(eq(pendingChanges.id, row.id)).limit(1);
-  if (!change) {
-    throw new KontexError("internal", "Pending change not found after creation");
+  if (spaceRole === "editor") {
+    const approved = await applyApproval(db, embeddings, proposal, branch, ctx.user.id, "Auto-approved by editor");
+    return { status: "approved", resolved: true, entry_id: approved.entryId };
+  } else {
+    return { proposal_id: proposal.id, status: "pending" };
   }
-  const approved = await applyApproval(db, embeddings, change, ctx.user.id, "Auto-approved by editor");
-  return { status: "resolved", resolved: true, decision: "approve", entry_id: approved.entryId };
 }

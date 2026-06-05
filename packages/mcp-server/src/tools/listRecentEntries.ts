@@ -1,24 +1,26 @@
 import { and, desc, eq } from "drizzle-orm";
 import {
   entries,
-  listRecentInput,
-  type ListRecentInput,
-  type ListRecentResult
+  listRecentEntriesInput,
+  type ListRecentEntriesInput,
+  type ListRecentEntriesResult
 } from "@kontex/shared";
 import type { Database } from "../db.js";
 import { requireProjectMember, requireSpaceMember, type AuthContext } from "../auth.js";
 
-export const listRecentTool = {
-  name: "list_recent",
+export const listRecentEntriesTool = {
+  name: "list_recent_entries",
+  title: "List Recent Entries",
   description: "List the most recently approved entries in a single space, newest first.",
-  inputSchema: listRecentInput
+  inputSchema: listRecentEntriesInput,
+  readOnlyHint: true
 };
 
-export async function handleListRecent(
+export async function handleListRecentEntries(
   db: Database,
   ctx: AuthContext,
-  input: ListRecentInput
-): Promise<ListRecentResult> {
+  input: ListRecentEntriesInput
+): Promise<ListRecentEntriesResult> {
   await requireProjectMember(db, ctx.user.id, input.project_id);
   await requireSpaceMember(db, ctx.user.id, input.space_id, input.project_id);
 

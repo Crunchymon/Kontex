@@ -13,7 +13,7 @@ import { InvitePanel } from "./InvitePanel";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/signin");
+  if (!session?.user?.id) redirect("/sign-in");
 
   const proj = await getProjectForUser(session.user.id, params.id);
   if (!proj) notFound();

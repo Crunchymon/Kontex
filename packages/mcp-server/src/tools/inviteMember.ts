@@ -9,9 +9,10 @@ import { applyProjectInvite } from "./_admin.js";
 
 export const inviteMemberTool = {
   name: "invite_member",
-  description:
-    "Invite a member to a project and assign a role in one selected space. Missing users are queued as pending invitations.",
-  inputSchema: inviteMemberInput
+  title: "Invite Member",
+  description: "Invite a member to a project and assign a role in one selected space. Missing users are queued as pending invitations.",
+  inputSchema: inviteMemberInput,
+  destructiveHint: true
 };
 
 export async function handleInviteMember(

@@ -1,22 +1,25 @@
 import { and, eq } from "drizzle-orm";
 import {
   entries,
-  pendingChanges,
+  branches,
+  branchEntries,
+  proposals,
   proposeArchiveInput,
   type ProposeArchiveInput,
   type ProposeArchiveResult
 } from "@kontex/shared";
 import type { Database } from "../db.js";
 import type { EmbeddingClient } from "../embeddings.js";
-import { requireProjectMember, requireSpaceEditor, type AuthContext } from "../auth.js";
+import { getSpaceRole, requireProjectMember, type AuthContext } from "../auth.js";
 import { KontexError } from "../errors.js";
 import { applyApproval } from "./_apply.js";
 
 export const proposeArchiveTool = {
   name: "propose_archive",
-  description:
-    "Propose archiving an existing entry. Space editors auto-apply the archive in this same call; callers without editor role are rejected.",
-  inputSchema: proposeArchiveInput
+  title: "Propose Archive",
+  description: "Propose archiving an existing entry.",
+  inputSchema: proposeArchiveInput,
+  destructiveHint: true
 };
 
 export async function handleProposeArchive(
@@ -40,32 +43,51 @@ export async function handleProposeArchive(
     throw new KontexError("validation", "Entry is already archived");
   }
 
-  await requireSpaceEditor(db, ctx.user.id, entry.spaceId, input.project_id);
+  const spaceRole = await getSpaceRole(db, ctx.user.id, entry.spaceId, input.project_id);
+  if (!spaceRole) {
+    throw new KontexError("not_space_member", "User has no role in this space");
+  }
 
-  const [row] = await db
-    .insert(pendingChanges)
+  // Create branch
+  const [branch] = await db
+    .insert(branches)
     .values({
-      projectId: entry.projectId,
       spaceId: entry.spaceId,
-      type: "archive",
-      entryId: entry.id,
-      proposedBy: ctx.user.id,
-      rationale: input.rationale,
+      name: input.rationale,
+      createdBy: ctx.user.id,
+      status: "open"
+    })
+    .returning();
+
+  // Create branch entry
+  await db.insert(branchEntries).values({
+    branchId: branch.id,
+    type: "archive",
+    entryId: entry.id
+  });
+
+  // Create proposal
+  const [proposal] = await db
+    .insert(proposals)
+    .values({
+      branchId: branch.id,
       status: "pending"
     })
-    .returning({ id: pendingChanges.id });
+    .returning();
 
-  const [change] = await db.select().from(pendingChanges).where(eq(pendingChanges.id, row.id)).limit(1);
-  if (!change) {
-    throw new KontexError("internal", "Pending change not found after creation");
+  if (spaceRole === "editor") {
+    const approved = await applyApproval(db, embeddings, proposal, branch, ctx.user.id, "Auto-approved by editor");
+    return {
+      status: "approved",
+      resolved: true,
+      entry_id: approved.entryId,
+      entry_title: entry.title
+    };
+  } else {
+    return {
+      proposal_id: proposal.id,
+      status: "pending",
+      entry_title: entry.title
+    };
   }
-  const approved = await applyApproval(db, embeddings, change, ctx.user.id, "Auto-approved by editor");
-  return {
-    status: "resolved",
-    resolved: true,
-    decision: "approve",
-    entry_id: approved.entryId,
-    entry_title: entry.title,
-    summary: "Archive applied immediately because caller is a space editor."
-  };
 }

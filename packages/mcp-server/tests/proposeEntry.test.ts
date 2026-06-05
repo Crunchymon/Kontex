@@ -9,6 +9,7 @@ import { MAX_ENTRY_CHARS } from "@kontex/shared";
 const mocks = vi.hoisted(() => ({
   requireProjectMember: vi.fn(),
   requireSpaceEditor: vi.fn(),
+  getSpaceRole: vi.fn(),
   applyApproval: vi.fn()
 }));
 
@@ -17,7 +18,8 @@ vi.mock("../src/auth.js", async (importOriginal) => {
   return {
     ...actual,
     requireProjectMember: mocks.requireProjectMember,
-    requireSpaceEditor: mocks.requireSpaceEditor
+    requireSpaceEditor: mocks.requireSpaceEditor,
+    getSpaceRole: mocks.getSpaceRole
   };
 });
 
@@ -28,34 +30,20 @@ vi.mock("../src/tools/_apply.js", () => ({
 const ctx: AuthContext = {
   user: {
     id: "00000000-0000-0000-0000-000000000001",
+    clerkId: "clerk_123",
     email: "u@example.com",
     name: "U",
     createdAt: new Date()
-  },
-  apiKey: {
-    id: "00000000-0000-0000-0000-000000000010",
-    keyHash: "h",
-    userId: "00000000-0000-0000-0000-000000000001",
-    name: "test",
-    source: "user_generated",
-    createdAt: new Date(),
-    revokedAt: null,
-    lastUsedAt: null
   }
 };
 
 function dbReturning(id: string): Database {
   const inserted = {
     id,
-    projectId: "00000000-0000-0000-0000-000000000100",
     spaceId: "00000000-0000-0000-0000-000000000200",
-    type: "new",
-    status: "pending",
-    proposedContent: "hello",
-    proposedBy: ctx.user.id,
-    rationale: "test",
-    proposedTitle: null,
-    entryId: null
+    name: "T",
+    createdBy: ctx.user.id,
+    status: "open"
   };
   const select = vi.fn().mockReturnValue({
     from: vi.fn().mockReturnValue({
@@ -80,6 +68,7 @@ describe("handleProposeEntry", () => {
   beforeEach(() => {
     mocks.requireProjectMember.mockReset().mockResolvedValue({ projectRole: "member" });
     mocks.requireSpaceEditor.mockReset().mockResolvedValue({ spaceRole: "editor" });
+    mocks.getSpaceRole.mockReset().mockResolvedValue("editor");
     mocks.applyApproval.mockReset().mockResolvedValue({ entryId: "entry-1" });
   });
 
@@ -98,7 +87,7 @@ describe("handleProposeEntry", () => {
   });
 
   it("auto-resolves new change for editor callers", async () => {
-    const db = dbReturning("change-1");
+    const db = dbReturning("branch-1");
     const result = await handleProposeEntry(db, embeddings, ctx, {
       project_id: "00000000-0000-0000-0000-000000000100",
       space_id: "00000000-0000-0000-0000-000000000200",
@@ -107,20 +96,17 @@ describe("handleProposeEntry", () => {
       rationale: "logging"
     });
     expect(result).toEqual({
-      status: "resolved",
+      status: "approved",
       resolved: true,
-      decision: "approve",
       entry_id: "entry-1"
     });
     expect(mocks.requireProjectMember).toHaveBeenCalledOnce();
-    expect(mocks.requireSpaceEditor).toHaveBeenCalledOnce();
+    expect(mocks.getSpaceRole).toHaveBeenCalledOnce();
     expect(mocks.applyApproval).toHaveBeenCalledOnce();
   });
 
   it("rejects callers without editor role on the target space", async () => {
-    mocks.requireSpaceEditor.mockRejectedValueOnce(
-      new KontexError("insufficient_role", "must be editor")
-    );
+    mocks.getSpaceRole.mockResolvedValueOnce(null);
     const db = dbReturning("never");
     await expect(
       handleProposeEntry(db, embeddings, ctx, {

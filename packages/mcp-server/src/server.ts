@@ -6,10 +6,11 @@ import type { AuthContext } from "./auth.js";
 import { KontexError } from "./errors.js";
 import { handleQueryContext, queryContextTool } from "./tools/queryContext.js";
 import { handleProposeEntry, proposeEntryTool } from "./tools/proposeEntry.js";
-import { handleResolveChange, resolveChangeTool } from "./tools/resolveChange.js";
+import { handleApproveChange, approveChangeTool } from "./tools/approveChange.js";
+import { handleRejectChange, rejectChangeTool } from "./tools/rejectChange.js";
 import { handleGetEntry, getEntryTool } from "./tools/getEntry.js";
-import { handleListRecent, listRecentTool } from "./tools/listRecent.js";
-import { handleListPending, listPendingTool } from "./tools/listPending.js";
+import { handleListRecentEntries, listRecentEntriesTool } from "./tools/listRecentEntries.js";
+import { handleListProposals, listProposalsTool } from "./tools/listProposals.js";
 import { handleProposeEdit, proposeEditTool } from "./tools/proposeEdit.js";
 import { handleProposeArchive, proposeArchiveTool } from "./tools/proposeArchive.js";
 import { handleListProjects, listProjectsTool } from "./tools/listProjects.js";
@@ -29,8 +30,11 @@ export type ServerDeps = {
 
 type ToolDef<TInput> = {
   name: string;
+  title: string;
   description: string;
   inputSchema: z.ZodType<TInput>;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
 };
 
 function registerTool<TInput, TOutput>(
@@ -41,19 +45,18 @@ function registerTool<TInput, TOutput>(
   const shape =
     tool.inputSchema instanceof z.ZodObject ? (tool.inputSchema as z.ZodObject<z.ZodRawShape>).shape : {};
 
-  (server as unknown as {
-    registerTool: (
-      name: string,
-      cfg: { title: string; description: string; inputSchema: z.ZodRawShape },
-      cb: (input: unknown) => Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }>
-    ) => void;
-  }).registerTool(
+  server.tool(
     tool.name,
-    { title: tool.name, description: tool.description, inputSchema: shape },
-    async (input: unknown) => {
+    tool.description,
+    shape,
+    {
+      title: tool.title,
+      readOnlyHint: tool.readOnlyHint,
+      destructiveHint: tool.destructiveHint
+    },
+    async (input: any) => {
       try {
-        const parsed = tool.inputSchema.parse(input);
-        const result = await handler(parsed);
+        const result = await handler(input as TInput);
         return {
           content: [{ type: "text", text: JSON.stringify(result) }]
         };
@@ -76,18 +79,7 @@ function registerTool<TInput, TOutput>(
 export function createServer(deps: ServerDeps): McpServer {
   const server = new McpServer({
     name: "kontex-mcp-server",
-    version: "0.3.0",
-    description: `You have access to Kontex, this team's shared institutional memory.
-
-Discovery: call list_projects first to find the project_id and project_role, then list_spaces to find space_ids and your role in those spaces.
-
-When to write: use propose_edit / propose_entry / propose_archive when the conversation contains decisions, new information, progress updates, or observations useful to teammates and future sessions.
-
-Before any propose_*, run query_context to check for existing similar entries. Prefer propose_edit over creating duplicates.
-
-Never propose without user confirmation. Do not propose for casual chat or simple Q&A with no new durable information.
-
-Tool semantics: editors who call propose_* apply changes immediately in the same call. Readers who call propose_edit create a pending proposal that an editor must review.`
+    version: "0.3.0"
   });
 
   registerTool(server, listProjectsTool, (input) => handleListProjects(deps.db, deps.ctx, input));
@@ -105,8 +97,8 @@ Tool semantics: editors who call propose_* apply changes immediately in the same
     handleQueryContext(deps.db, deps.embeddings, deps.ctx, input)
   );
   registerTool(server, getEntryTool, (input) => handleGetEntry(deps.db, deps.ctx, input));
-  registerTool(server, listRecentTool, (input) => handleListRecent(deps.db, deps.ctx, input));
-  registerTool(server, listPendingTool, (input) => handleListPending(deps.db, deps.ctx, input));
+  registerTool(server, listRecentEntriesTool, (input) => handleListRecentEntries(deps.db, deps.ctx, input));
+  registerTool(server, listProposalsTool, (input) => handleListProposals(deps.db, deps.ctx, input));
   registerTool(server, proposeEntryTool, (input) =>
     handleProposeEntry(deps.db, deps.embeddings, deps.ctx, input)
   );
@@ -116,8 +108,11 @@ Tool semantics: editors who call propose_* apply changes immediately in the same
   registerTool(server, proposeArchiveTool, (input) =>
     handleProposeArchive(deps.db, deps.embeddings, deps.ctx, input)
   );
-  registerTool(server, resolveChangeTool, (input) =>
-    handleResolveChange(deps.db, deps.embeddings, deps.ctx, input)
+  registerTool(server, approveChangeTool, (input) =>
+    handleApproveChange(deps.db, deps.embeddings, deps.ctx, input)
+  );
+  registerTool(server, rejectChangeTool, (input) =>
+    handleRejectChange(deps.db, deps.ctx, input)
   );
 
   return server;

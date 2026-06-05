@@ -10,8 +10,10 @@ import type { AuthContext } from "../auth.js";
 
 export const createProjectTool = {
   name: "create_project",
+  title: "Create Project",
   description: "Create a new project and assign caller as project admin.",
-  inputSchema: createProjectInput
+  inputSchema: createProjectInput,
+  destructiveHint: true
 };
 
 export async function handleCreateProject(

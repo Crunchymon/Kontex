@@ -12,8 +12,10 @@ import { KontexError } from "../errors.js";
 
 export const getEntryTool = {
   name: "get_entry",
+  title: "Get Entry",
   description: "Fetch the full content and version history for a single entry the caller can read.",
-  inputSchema: getEntryInput
+  inputSchema: getEntryInput,
+  readOnlyHint: true
 };
 
 export async function handleGetEntry(

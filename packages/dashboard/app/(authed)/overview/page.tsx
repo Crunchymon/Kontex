@@ -6,7 +6,7 @@ import { Icon } from "../../../components/Icon";
 
 export default async function OverviewPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/signin");
+  if (!session?.user?.id) redirect("/sign-in");
 
   const userId = session.user.id;
   const [stats, projects, recent] = await Promise.all([

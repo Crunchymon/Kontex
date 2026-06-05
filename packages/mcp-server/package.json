@@ -17,6 +17,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@clerk/backend": "^3.4.14",
     "@google/generative-ai": "^0.24.1",
     "@kontex/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.15.1",

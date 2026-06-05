@@ -1,18 +1,13 @@
 import { redirect } from "next/navigation";
-import { auth, signOut } from "../../lib/auth";
+import { currentUser } from "@clerk/nextjs/server";
 import { Sidebar } from "../../components/Sidebar";
 import { Topbar } from "../../components/Topbar";
-import { UserMenu } from "../../components/UserMenu";
+import { UserButton } from "@clerk/nextjs";
 
 export default async function AuthedLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session?.user) {
-    redirect("/signin");
-  }
-
-  async function handleSignOut() {
-    "use server";
-    await signOut({ redirectTo: "/" });
+  const user = await currentUser();
+  if (!user) {
+    redirect("/sign-in");
   }
 
   return (
@@ -22,7 +17,7 @@ export default async function AuthedLayout({ children }: { children: React.React
         <Topbar
           title="Kontex"
           subtitle="Institutional memory for AI-native teams"
-          userMenu={<UserMenu user={session.user} signOutAction={handleSignOut} />}
+          userMenu={<UserButton />}
         />
         <main className="flex-1 p-gutter relative dot-grid">
           <div className="relative z-10 max-w-container-max mx-auto">{children}</div>

@@ -10,8 +10,10 @@ import { requireProjectAdmin, type AuthContext } from "../auth.js";
 
 export const setSpaceRoleTool = {
   name: "set_space_role",
+  title: "Set Space Role",
   description: "Set a member's role in a space. Requires project admin role.",
-  inputSchema: setSpaceRoleInput
+  inputSchema: setSpaceRoleInput,
+  destructiveHint: true
 };
 
 export async function handleSetSpaceRole(

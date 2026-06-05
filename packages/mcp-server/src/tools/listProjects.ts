@@ -11,8 +11,10 @@ import type { AuthContext } from "../auth.js";
 
 export const listProjectsTool = {
   name: "list_projects",
+  title: "List Projects",
   description: "List projects the caller belongs to, including their project role.",
-  inputSchema: listProjectsInput
+  inputSchema: listProjectsInput,
+  readOnlyHint: true
 };
 
 export async function handleListProjects(

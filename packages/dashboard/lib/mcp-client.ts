@@ -1,10 +1,10 @@
 import type {
   GetEntryInput,
   GetEntryResult,
-  ListPendingInput,
-  ListPendingResult,
-  ListRecentInput,
-  ListRecentResult,
+  ListProposalsInput,
+  ListProposalsResult,
+  ListRecentEntriesInput,
+  ListRecentEntriesResult,
   ProposeArchiveInput,
   ProposeArchiveResult,
   ProposeEditInput,
@@ -13,8 +13,10 @@ import type {
   ProposeEntryResult,
   QueryContextInput,
   QueryContextResult,
-  ResolveChangeInput,
-  ResolveChangeResult,
+  ApproveChangeInput,
+  ApproveChangeResult,
+  RejectChangeInput,
+  RejectChangeResult,
   ToolName,
   ToolInputMap,
   ToolOutputMap
@@ -42,13 +44,15 @@ export const mcpClient = {
   queryContext: (input: QueryContextInput): Promise<QueryContextResult> =>
     call("query_context", input),
   getEntry: (input: GetEntryInput): Promise<GetEntryResult> => call("get_entry", input),
-  listRecent: (input: ListRecentInput): Promise<ListRecentResult> => call("list_recent", input),
-  listPending: (input: ListPendingInput): Promise<ListPendingResult> => call("list_pending", input),
+  listRecentEntries: (input: ListRecentEntriesInput): Promise<ListRecentEntriesResult> => call("list_recent_entries", input),
+  listProposals: (input: ListProposalsInput): Promise<ListProposalsResult> => call("list_proposals", input),
   proposeEntry: (input: ProposeEntryInput): Promise<ProposeEntryResult> =>
     call("propose_entry", input),
   proposeEdit: (input: ProposeEditInput): Promise<ProposeEditResult> => call("propose_edit", input),
   proposeArchive: (input: ProposeArchiveInput): Promise<ProposeArchiveResult> =>
     call("propose_archive", input),
-  resolveChange: (input: ResolveChangeInput): Promise<ResolveChangeResult> =>
-    call("resolve_change", input)
+  approveChange: (input: ApproveChangeInput): Promise<ApproveChangeResult> =>
+    call("approve_change", input),
+  rejectChange: (input: RejectChangeInput): Promise<RejectChangeResult> =>
+    call("reject_change", input)
 };

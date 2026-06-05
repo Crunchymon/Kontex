@@ -106,9 +106,8 @@ describe("handleProposeEdit", () => {
       rationale: "reason"
     });
     expect(result).toMatchObject({
-      status: "resolved",
+      status: "approved",
       resolved: true,
-      decision: "approve",
       entry_id: "entry-1"
     });
     expect(mocks.applyApproval).toHaveBeenCalledOnce();

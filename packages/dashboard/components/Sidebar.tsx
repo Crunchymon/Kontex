@@ -14,8 +14,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/projects", label: "Projects", icon: "folder_managed" },
   { href: "/browse", label: "Context", icon: "manage_search" },
-  { href: "/pending", label: "Pending", icon: "approval_delegation" },
-  { href: "/keys", label: "API Keys", icon: "key" }
+  { href: "/pending", label: "Pending", icon: "approval_delegation" }
 ];
 
 export function Sidebar() {

@@ -12,8 +12,10 @@ import { guardProjectRoleUpdate } from "./_admin.js";
 
 export const setProjectRoleTool = {
   name: "set_project_role",
+  title: "Set Project Role",
   description: "Set project-level role for a member. Requires project admin role.",
-  inputSchema: setProjectRoleInput
+  inputSchema: setProjectRoleInput,
+  destructiveHint: true
 };
 
 export async function handleSetProjectRole(

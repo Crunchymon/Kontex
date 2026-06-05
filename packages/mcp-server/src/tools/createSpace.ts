@@ -10,8 +10,10 @@ import { requireProjectAdmin, type AuthContext } from "../auth.js";
 
 export const createSpaceTool = {
   name: "create_space",
+  title: "Create Space",
   description: "Create a space in a project. Requires project admin role.",
-  inputSchema: createSpaceInput
+  inputSchema: createSpaceInput,
+  destructiveHint: true
 };
 
 export async function handleCreateSpace(

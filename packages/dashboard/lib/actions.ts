@@ -13,7 +13,6 @@ import {
 } from "@kontex/shared/schema";
 import { db } from "./db";
 import { auth } from "./auth";
-import { createUserApiKey, revokeUserKey } from "./api-keys";
 
 async function requireUserId(): Promise<string> {
   const session = await auth();
@@ -271,23 +270,3 @@ export async function setProjectRole(formData: FormData) {
   revalidatePath(`/projects/${projectId}/permissions`);
 }
 
-export type GeneratedKeyResult = {
-  id: string;
-  rawKey: string;
-};
-
-export async function generateApiKey(formData: FormData): Promise<GeneratedKeyResult> {
-  const userId = await requireUserId();
-  const name = String(formData.get("name") ?? "").trim() || "Untitled key";
-  const created = await createUserApiKey(userId, name);
-  revalidatePath("/keys");
-  return created;
-}
-
-export async function revokeApiKeyAction(formData: FormData) {
-  const userId = await requireUserId();
-  const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("API key id required");
-  await revokeUserKey(userId, id);
-  revalidatePath("/keys");
-}

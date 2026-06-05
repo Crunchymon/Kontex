@@ -24,7 +24,7 @@ export default async function LandingPage() {
   if (session?.user) {
     return redirect("/overview");
   }
-  const ctaHref = "/signin";
+  const ctaHref = "/sign-in";
   const ctaLabel = "Sign in with Google";
 
   return (

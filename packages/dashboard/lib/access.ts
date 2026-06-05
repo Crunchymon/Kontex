@@ -1,14 +1,14 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import {
-  apiKeys,
   entries,
   pendingInvitations,
-  pendingChanges,
   projectMembers,
   projects,
   spaceMembers,
   spaces,
   users,
+  proposals,
+  branches,
   type ProjectRole,
   type SpaceRole
 } from "@kontex/shared/schema";
@@ -115,14 +115,6 @@ export async function listMembersForProject(projectId: string): Promise<MemberRo
   }));
 }
 
-export async function listUserApiKeys(userId: string) {
-  return db()
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.userId, userId))
-    .orderBy(desc(apiKeys.createdAt));
-}
-
 export async function listActiveInviteLinks(projectId: string) {
   return db()
     .select({
@@ -168,10 +160,12 @@ export async function dashboardStats(userId: string) {
       .from(projectMembers)
       .where(inArray(projectMembers.projectId, projectIds)),
     db()
-      .select({ id: pendingChanges.id })
-      .from(pendingChanges)
+      .select({ id: proposals.id })
+      .from(proposals)
+      .innerJoin(branches, eq(proposals.branchId, branches.id))
+      .innerJoin(spaces, eq(branches.spaceId, spaces.id))
       .where(
-        and(inArray(pendingChanges.projectId, projectIds), eq(pendingChanges.status, "pending"))
+        and(inArray(spaces.projectId, projectIds), eq(proposals.status, "pending"))
       ),
     db()
       .select({ spaceId: spaceMembers.spaceId })

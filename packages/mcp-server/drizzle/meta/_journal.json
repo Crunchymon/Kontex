@@ -15,6 +15,20 @@
       "when": 1778422045590,
       "tag": "0001_grey_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780377384969,
+      "tag": "0002_fat_khan",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780377413129,
+      "tag": "0003_flat_ben_grimm",
+      "breakpoints": true
     }
   ]
 }

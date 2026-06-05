@@ -1,7 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import {
   entries,
-  pendingChanges,
+  branches,
+  branchEntries,
+  proposals,
   proposeEditInput,
   MAX_ENTRY_CHARS,
   TOO_LONG_ERROR,
@@ -16,9 +18,10 @@ import { applyApproval } from "./_apply.js";
 
 export const proposeEditTool = {
   name: "propose_edit",
-  description:
-    "Propose an edit to an existing entry. Editors auto-apply this in the same call; readers can submit a pending proposal for editor review. Content is hard-capped at 1500 characters.",
-  inputSchema: proposeEditInput
+  title: "Propose Edit",
+  description: "Propose an edit to an existing entry. Content is hard-capped at 1500 characters.",
+  inputSchema: proposeEditInput,
+  destructiveHint: true
 };
 
 export async function handleProposeEdit(
@@ -52,41 +55,48 @@ export async function handleProposeEdit(
     throw new KontexError("not_space_member", "User has no role in this space");
   }
 
-  const [row] = await db
-    .insert(pendingChanges)
+  // Create branch
+  const [branch] = await db
+    .insert(branches)
     .values({
-      projectId: entry.projectId,
       spaceId: entry.spaceId,
-      type: "edit",
-      entryId: entry.id,
-      proposedContent: input.new_content,
-      proposedTitle: input.new_title ?? null,
-      proposedBy: ctx.user.id,
-      rationale: input.rationale,
+      name: input.rationale,
+      createdBy: ctx.user.id,
+      status: "open"
+    })
+    .returning();
+
+  // Create branch entry
+  await db.insert(branchEntries).values({
+    branchId: branch.id,
+    type: "edit",
+    entryId: entry.id,
+    proposedContent: input.new_content,
+    proposedTitle: input.new_title ?? null
+  });
+
+  // Create proposal
+  const [proposal] = await db
+    .insert(proposals)
+    .values({
+      branchId: branch.id,
       status: "pending"
     })
-    .returning({ id: pendingChanges.id });
+    .returning();
 
-  if (spaceRole === "reader") {
+  if (spaceRole === "editor") {
+    const approved = await applyApproval(db, embeddings, proposal, branch, ctx.user.id, "Auto-approved by editor");
     return {
-      change_id: row.id,
+      status: "approved",
+      resolved: true,
+      entry_id: approved.entryId,
+      entry_title: entry.title
+    };
+  } else {
+    return {
+      proposal_id: proposal.id,
       status: "pending",
-      entry_title: entry.title,
-      summary: "Edit proposal queued. A space editor will review and merge it."
+      entry_title: entry.title
     };
   }
-
-  const [change] = await db.select().from(pendingChanges).where(eq(pendingChanges.id, row.id)).limit(1);
-  if (!change) {
-    throw new KontexError("internal", "Pending change not found after creation");
-  }
-  const approved = await applyApproval(db, embeddings, change, ctx.user.id, "Auto-approved by editor");
-  return {
-    status: "resolved",
-    resolved: true,
-    decision: "approve",
-    entry_id: approved.entryId,
-    entry_title: entry.title,
-    summary: "Edit applied immediately because caller is a space editor."
-  };
 }

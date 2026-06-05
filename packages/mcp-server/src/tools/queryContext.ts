@@ -17,9 +17,10 @@ import { KontexError } from "../errors.js";
 
 export const queryContextTool = {
   name: "query_context",
-  description:
-    "Semantic search over the project's entries. Returns the most similar active entries the caller has read access to, optionally narrowed to a single space.",
-  inputSchema: queryContextInput
+  title: "Query Context",
+  description: "Semantic search over the project's entries. Returns the most similar active entries the caller has read access to, optionally narrowed to a single space.",
+  inputSchema: queryContextInput,
+  readOnlyHint: true
 };
 
 export async function handleQueryContext(

@@ -1,5 +1,5 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { env } from "./env";
 
 export type McpCallResult<T = unknown> =
@@ -17,12 +17,17 @@ export async function callMcpToolServer<T = unknown>(
 
   const baseUrl = env.MCP_SERVER_URL().replace(/\/$/, "");
   const client = new Client({ name: "kontex-dashboard", version: "0.2.0" });
-  const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
+  const transport = new SSEClientTransport(new URL(`${baseUrl}/sse`), {
     requestInit: {
       headers: {
         Authorization: `Bearer ${apiKey}`
       }
-    }
+    },
+    eventSourceInit: {
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      }
+    } as any
   });
 
   try {

@@ -11,8 +11,10 @@ import { requireProjectMember, type AuthContext } from "../auth.js";
 
 export const listSpacesTool = {
   name: "list_spaces",
+  title: "List Spaces",
   description: "List spaces in a project and the caller's role in each space.",
-  inputSchema: listSpacesInput
+  inputSchema: listSpacesInput,
+  readOnlyHint: true
 };
 
 export async function handleListSpaces(

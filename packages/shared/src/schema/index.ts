@@ -15,6 +15,7 @@ export const MAX_ENTRY_CHARS = 1500;
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
+  clerkId: text("clerk_id").unique(),
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
@@ -69,23 +70,6 @@ export const spaceMembers = pgTable(
   })
 );
 
-export const apiKeys = pgTable(
-  "api_keys",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    keyHash: text("key_hash").notNull().unique(),
-    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    source: text("source", { enum: ["user_generated", "dashboard_session"] }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    lastUsedAt: timestamp("last_used_at", { withTimezone: true })
-  },
-  (table) => ({
-    userIdx: index("api_keys_user_idx").on(table.userId)
-  })
-);
-
 export const entries = pgTable(
   "entries",
   {
@@ -127,30 +111,42 @@ export const entryVersions = pgTable(
   })
 );
 
-export const pendingChanges = pgTable(
-  "pending_changes",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-    spaceId: uuid("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
-    type: text("type", { enum: ["new", "edit", "archive"] }).notNull(),
-    entryId: uuid("entry_id").references(() => entries.id, { onDelete: "cascade" }),
-    proposedContent: text("proposed_content"),
-    proposedTitle: text("proposed_title"),
-    proposedBy: uuid("proposed_by").notNull().references(() => users.id, { onDelete: "restrict" }),
-    rationale: text("rationale").notNull(),
-    status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
-    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "restrict" }),
-    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-    reviewReason: text("review_reason"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
-  },
-  (table) => ({
-    projectIdx: index("pending_changes_project_idx").on(table.projectId),
-    spaceIdx: index("pending_changes_space_idx").on(table.spaceId),
-    statusIdx: index("pending_changes_status_idx").on(table.status)
-  })
-);
+export const branches = pgTable("branches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  spaceId: uuid("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+  status: text("status", { enum: ["open", "merged", "closed"] }).notNull().default("open"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => ({
+  spaceIdx: index("branches_space_idx").on(table.spaceId),
+  statusIdx: index("branches_status_idx").on(table.status)
+}));
+
+export const branchEntries = pgTable("branch_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  branchId: uuid("branch_id").notNull().references(() => branches.id, { onDelete: "cascade" }),
+  entryId: uuid("entry_id").references(() => entries.id, { onDelete: "cascade" }),
+  proposedContent: text("proposed_content"),
+  proposedTitle: text("proposed_title"),
+  type: text("type", { enum: ["new", "edit", "archive"] }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => ({
+  branchIdx: index("branch_entries_branch_idx").on(table.branchId)
+}));
+
+export const proposals = pgTable("proposals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  branchId: uuid("branch_id").notNull().references(() => branches.id, { onDelete: "cascade" }),
+  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "restrict" }),
+  status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewReason: text("review_reason")
+}, (table) => ({
+  branchIdx: index("proposals_branch_idx").on(table.branchId),
+  statusIdx: index("proposals_status_idx").on(table.status)
+}));
 
 export const pendingInvitations = pgTable(
   "pending_invitations",
@@ -182,18 +178,22 @@ export type Project = typeof projects.$inferSelect;
 export type Space = typeof spaces.$inferSelect;
 export type ProjectMember = typeof projectMembers.$inferSelect;
 export type SpaceMember = typeof spaceMembers.$inferSelect;
-export type ApiKey = typeof apiKeys.$inferSelect;
 export type Entry = typeof entries.$inferSelect;
 export type NewEntry = typeof entries.$inferInsert;
 export type EntryVersion = typeof entryVersions.$inferSelect;
-export type PendingChange = typeof pendingChanges.$inferSelect;
-export type NewPendingChange = typeof pendingChanges.$inferInsert;
 export type PendingInvitation = typeof pendingInvitations.$inferSelect;
 export type NewPendingInvitation = typeof pendingInvitations.$inferInsert;
+
+export type Branch = typeof branches.$inferSelect;
+export type NewBranch = typeof branches.$inferInsert;
+export type BranchEntry = typeof branchEntries.$inferSelect;
+export type NewBranchEntry = typeof branchEntries.$inferInsert;
+export type Proposal = typeof proposals.$inferSelect;
+export type NewProposal = typeof proposals.$inferInsert;
 
 export type ProjectRole = "admin" | "member";
 export type SpaceRole = "editor" | "reader";
 export type ChangeType = "new" | "edit" | "archive";
-export type ChangeStatus = "pending" | "approved" | "rejected";
+export type BranchStatus = "open" | "merged" | "closed";
+export type ProposalStatus = "pending" | "approved" | "rejected";
 export type EntryStatus = "active" | "archived";
-export type ApiKeySource = "user_generated" | "dashboard_session";
