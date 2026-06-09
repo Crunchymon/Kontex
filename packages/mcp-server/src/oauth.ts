@@ -1,10 +1,18 @@
 import { createHash, randomUUID } from "node:crypto";
-import express, { type Request, type Router } from "express";
+import express, { type NextFunction, type Request, type Response, type Router } from "express";
 import { eq } from "drizzle-orm";
 import { oauthClients, oauthCodes, oauthTokens } from "@kontex/shared/schema";
 import type { Database } from "./db.js";
 
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24;
+
+type AsyncRouteHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>;
+
+function asyncHandler(handler: AsyncRouteHandler) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    handler(req, res, next).catch(next);
+  };
+}
 
 function requestOrigin(req: Request): string {
   const forwardedProto = req.get("x-forwarded-proto")?.split(",")[0]?.trim();
@@ -32,14 +40,6 @@ function safeRedirectUri(value: unknown): string | null {
   }
 }
 
-function appendOAuthParams(redirectUri: string, params: Record<string, string>): string {
-  const url = new URL(redirectUri);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  return url.toString();
-}
-
 function createS256Challenge(verifier: string): string {
   return createHash("sha256").update(verifier).digest("base64url");
 }
@@ -61,7 +61,7 @@ export function createOAuthRouter(db: Database, dashboardUrl: string): Router {
     });
   });
 
-  router.post("/oauth/register", async (req, res) => {
+  router.post("/oauth/register", asyncHandler(async (req, res) => {
     const rawRedirectUris: string[] = isStringArray(req.body?.redirect_uris) ? req.body.redirect_uris : [];
     const normalizedRedirectUris = rawRedirectUris.map((uri: string) => safeRedirectUri(uri));
     if (normalizedRedirectUris.some((uri: string | null) => !uri)) {
@@ -89,9 +89,9 @@ export function createOAuthRouter(db: Database, dashboardUrl: string): Router {
       grant_types: ["authorization_code"],
       response_types: ["code"]
     });
-  });
+  }));
 
-  router.get("/oauth/authorize", async (req, res) => {
+  router.get("/oauth/authorize", asyncHandler(async (req, res) => {
     const clientId = String(req.query.client_id ?? "");
     const redirectUri = safeRedirectUri(req.query.redirect_uri);
     const state = typeof req.query.state === "string" ? req.query.state : undefined;
@@ -123,9 +123,9 @@ export function createOAuthRouter(db: Database, dashboardUrl: string): Router {
     if (state) url.searchParams.set("state", state);
 
     res.redirect(url.toString());
-  });
+  }));
 
-  router.post("/oauth/token", async (req, res) => {
+  router.post("/oauth/token", asyncHandler(async (req, res) => {
     const grantType = String(req.body?.grant_type ?? "");
     const code = String(req.body?.code ?? "");
     const clientId = String(req.body?.client_id ?? "");
@@ -185,6 +185,14 @@ export function createOAuthRouter(db: Database, dashboardUrl: string): Router {
       token_type: "Bearer",
       expires_in: ACCESS_TOKEN_TTL_SECONDS
     });
+  }));
+
+  router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    // eslint-disable-next-line no-console
+    console.error("OAuth route error", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "server_error" });
+    }
   });
 
   return router;
