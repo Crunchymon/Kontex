@@ -1,2 +1,2 @@
-DROP TABLE "api_keys" CASCADE;--> statement-breakpoint
-DROP TABLE "pending_changes" CASCADE;
+DROP TABLE IF EXISTS "api_keys" CASCADE;--> statement-breakpoint
+DROP TABLE IF EXISTS "pending_changes" CASCADE;

@@ -62,6 +62,10 @@ export function createOAuthRouter(db: Database, dashboardUrl: string): Router {
   });
 
   router.post("/oauth/register", asyncHandler(async (req, res) => {
+    // Log incoming registration attempts to help diagnose failures.
+    // Avoid logging secrets in production; this is intentionally minimal.
+    // eslint-disable-next-line no-console
+    console.info("POST /oauth/register", { ip: req.ip, body: req.body });
     const rawRedirectUris: string[] = isStringArray(req.body?.redirect_uris) ? req.body.redirect_uris : [];
     const normalizedRedirectUris = rawRedirectUris.map((uri: string) => safeRedirectUri(uri));
     if (normalizedRedirectUris.some((uri: string | null) => !uri)) {
@@ -74,12 +78,21 @@ export function createOAuthRouter(db: Database, dashboardUrl: string): Router {
     const clientSecret = randomUUID();
     const clientName = normalizeClientName(req.body?.client_name);
 
-    await db.insert(oauthClients).values({
-      clientId,
-      clientSecret,
-      clientName,
-      redirectUris
-    });
+    try {
+      await db.insert(oauthClients).values({
+        clientId,
+        clientSecret,
+        clientName,
+        redirectUris
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("oauth.register insert error", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "server_error", details: String(err) });
+      }
+      return;
+    }
 
     res.status(201).json({
       client_id: clientId,

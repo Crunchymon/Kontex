@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from "express";
+import cors from "cors";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import dotenv from "dotenv";
@@ -20,6 +21,21 @@ const embeddings = createEmbeddingClient(env.GEMINI_API_KEY, env.EMBEDDING_MODEL
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false }));
+// Allow cross-origin requests from the dashboard host so browser-based
+// dynamic client registration can succeed (preflight OPTIONS included).
+const allowedOrigins = [env.DASHBOARD_URL];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  })
+);
+
 app.use(createOAuthRouter(db, env.DASHBOARD_URL));
 
 app.get("/healthz", (_req, res) => {

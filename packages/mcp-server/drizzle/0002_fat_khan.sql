@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS "proposals" (
 	"review_reason" text
 );
 --> statement-breakpoint
-ALTER TABLE "users" ADD COLUMN "clerk_id" text;--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "clerk_id" text;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "branch_entries" ADD CONSTRAINT "branch_entries_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
@@ -69,4 +69,5 @@ CREATE INDEX IF NOT EXISTS "branches_space_idx" ON "branches" USING btree ("spac
 CREATE INDEX IF NOT EXISTS "branches_status_idx" ON "branches" USING btree ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "proposals_branch_idx" ON "proposals" USING btree ("branch_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "proposals_status_idx" ON "proposals" USING btree ("status");--> statement-breakpoint
-ALTER TABLE "users" ADD CONSTRAINT "users_clerk_id_unique" UNIQUE("clerk_id");
+-- Ensure a unique index exists for clerk_id (idempotent)
+CREATE UNIQUE INDEX IF NOT EXISTS "users_clerk_id_unique" ON "users" ("clerk_id");--> statement-breakpoint
