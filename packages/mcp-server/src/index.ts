@@ -9,6 +9,7 @@ import { createDb } from "./db.js";
 import { createEmbeddingClient } from "./embeddings.js";
 import { authenticate } from "./auth.js";
 import { KontexError } from "./errors.js";
+import { createOAuthRouter } from "./oauth.js";
 
 dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 
@@ -18,6 +19,8 @@ const embeddings = createEmbeddingClient(env.GEMINI_API_KEY, env.EMBEDDING_MODEL
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: false }));
+app.use(createOAuthRouter(db, env.DASHBOARD_URL));
 
 app.get("/healthz", (_req, res) => {
   res.status(200).send("ok");

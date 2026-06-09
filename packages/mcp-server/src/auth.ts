@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { verifyToken } from "@clerk/backend";
 import {
+  oauthTokens,
   projectMembers,
   spaceMembers,
   type ProjectRole,
@@ -24,6 +25,24 @@ export async function authenticate(
     throw new KontexError("missing_auth", "Missing Authorization header");
   }
   const token = rawKey.replace(/^Bearer\s+/i, "").trim();
+  const [tokenRow] = await db
+    .select()
+    .from(oauthTokens)
+    .where(eq(oauthTokens.token, token))
+    .limit(1);
+
+  if (tokenRow) {
+    if (tokenRow.expiresAt < new Date()) {
+      throw new KontexError("invalid_token", "Token expired");
+    }
+    const [userRow] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, tokenRow.userId))
+      .limit(1);
+    if (!userRow) throw new KontexError("user_not_found", "User not found");
+    return { user: userRow };
+  }
 
   let clerkUserId: string;
   try {

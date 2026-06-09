@@ -11,6 +11,15 @@ importers:
       drizzle-kit:
         specifier: ^0.28.1
         version: 0.28.1
+      hono:
+        specifier: ^4.12.24
+        version: 4.12.24
+      jose:
+        specifier: ^6.2.3
+        version: 6.2.3
+      uuid:
+        specifier: ^14.0.0
+        version: 14.0.0
 
   packages/dashboard:
     dependencies:
@@ -102,6 +111,15 @@ importers:
       express:
         specifier: ^4.21.0
         version: 4.22.1
+      hono:
+        specifier: ^4.12.24
+        version: 4.12.24
+      jose:
+        specifier: ^6.2.3
+        version: 6.2.3
+      uuid:
+        specifier: ^14.0.0
+        version: 14.0.0
       ws:
         specifier: ^8.18.0
         version: 8.20.0
@@ -1811,8 +1829,8 @@ packages:
   headers-polyfill@5.0.1:
     resolution: {integrity: sha512-1TJ6Fih/b8h5TIcv+1+Hw0PDQWJTKDKzFZzcKOiW1wJza3XoAQlkCuXLbymPYB8+ZQyw8mHvdw560e8zVFIWyA==}
 
-  hono@4.12.16:
-    resolution: {integrity: sha512-jN0ZewiNAWSe5khM3EyCmBb250+b40wWbwNILNfEvq84VREWwOIkuUsFONk/3i3nqkz7Oe1PcpM2mwQEK2L9Kg==}
+  hono@4.12.24:
+    resolution: {integrity: sha512-I36D1s+HgQc55KbhEr4iybfxv/9o1zdpw+XEM6dJa91LqQD0HCoSGdxpRJCZE+aavs87j4V3Ls2OJzq8C/U4iw==}
     engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@4.0.0:
@@ -2594,6 +2612,10 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
+  uuid@14.0.0:
+    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
+    hasBin: true
+
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
@@ -3114,9 +3136,9 @@ snapshots:
 
   '@google/generative-ai@0.24.1': {}
 
-  '@hono/node-server@1.19.14(hono@4.12.16)':
+  '@hono/node-server@1.19.14(hono@4.12.24)':
     dependencies:
-      hono: 4.12.16
+      hono: 4.12.24
 
   '@inquirer/ansi@2.0.5':
     optional: true
@@ -3166,7 +3188,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(zod@3.25.76)':
     dependencies:
-      '@hono/node-server': 1.19.14(hono@4.12.16)
+      '@hono/node-server': 1.19.14(hono@4.12.24)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
@@ -3176,7 +3198,7 @@ snapshots:
       eventsource-parser: 3.0.8
       express: 5.2.1
       express-rate-limit: 8.4.1(express@5.2.1)
-      hono: 4.12.16
+      hono: 4.12.24
       jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -4147,7 +4169,7 @@ snapshots:
       set-cookie-parser: 3.1.0
     optional: true
 
-  hono@4.12.16: {}
+  hono@4.12.24: {}
 
   html-encoding-sniffer@4.0.0:
     dependencies:
@@ -4954,6 +4976,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   utils-merge@1.0.1: {}
+
+  uuid@14.0.0: {}
 
   vary@1.1.2: {}
 

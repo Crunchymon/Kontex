@@ -5,6 +5,7 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().min(1),
   EMBEDDING_MODEL: z.string().min(1).default("gemini-embedding-001"),
   CLERK_SECRET_KEY: z.string().min(1, "Clerk Secret Key is required"),
+  DASHBOARD_URL: z.string().url(),
   PORT: z.string().optional()
 });
 
