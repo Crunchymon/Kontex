@@ -6,7 +6,8 @@ const envSchema = z.object({
   EMBEDDING_MODEL: z.string().min(1).default("gemini-embedding-001"),
   CLERK_SECRET_KEY: z.string().min(1, "Clerk Secret Key is required"),
   DASHBOARD_URL: z.string().url(),
-  PORT: z.string().optional()
+  PORT: z.string().optional(),
+  CLERK_FRONTEND_API_URL : z.string().url()
 });
 
 export type Env = z.infer<typeof envSchema>;

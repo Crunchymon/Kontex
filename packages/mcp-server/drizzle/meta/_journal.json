@@ -36,6 +36,13 @@
       "when": 1780989563018,
       "tag": "0004_lame_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781187838465,
+      "tag": "0005_lovely_preak",
+      "breakpoints": true
     }
   ]
 }

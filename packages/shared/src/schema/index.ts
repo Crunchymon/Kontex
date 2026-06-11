@@ -172,53 +172,6 @@ export const pendingInvitations = pgTable(
   })
 );
 
-export const oauthClients = pgTable("oauth_clients", {
-  clientId: text("client_id").primaryKey(),
-  clientSecret: text("client_secret").notNull(),
-  clientName: text("client_name").notNull(),
-  redirectUris: text("redirect_uris").array().notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
-});
-
-export const oauthCodes = pgTable(
-  "oauth_codes",
-  {
-    code: text("code").primaryKey(),
-    clientId: text("client_id")
-      .notNull()
-      .references(() => oauthClients.clientId, { onDelete: "cascade" }),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    codeChallenge: text("code_challenge").notNull(),
-    redirectUri: text("redirect_uri").notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
-  },
-  (table) => ({
-    clientIdx: index("oauth_codes_client_idx").on(table.clientId),
-    userIdx: index("oauth_codes_user_idx").on(table.userId)
-  })
-);
-
-export const oauthTokens = pgTable(
-  "oauth_tokens",
-  {
-    token: text("token").primaryKey(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    clientId: text("client_id")
-      .notNull()
-      .references(() => oauthClients.clientId, { onDelete: "cascade" }),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
-  },
-  (table) => ({
-    userIdx: index("oauth_tokens_user_idx").on(table.userId),
-    clientIdx: index("oauth_tokens_client_idx").on(table.clientId)
-  })
-);
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -231,9 +184,6 @@ export type NewEntry = typeof entries.$inferInsert;
 export type EntryVersion = typeof entryVersions.$inferSelect;
 export type PendingInvitation = typeof pendingInvitations.$inferSelect;
 export type NewPendingInvitation = typeof pendingInvitations.$inferInsert;
-export type OAuthClient = typeof oauthClients.$inferSelect;
-export type OAuthCode = typeof oauthCodes.$inferSelect;
-export type OAuthToken = typeof oauthTokens.$inferSelect;
 
 export type Branch = typeof branches.$inferSelect;
 export type NewBranch = typeof branches.$inferInsert;

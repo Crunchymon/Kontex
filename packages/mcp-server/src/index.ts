@@ -10,7 +10,7 @@ import { createDb } from "./db.js";
 import { createEmbeddingClient } from "./embeddings.js";
 import { authenticate } from "./auth.js";
 import { KontexError } from "./errors.js";
-import { createOAuthRouter } from "./oauth.js";
+
 
 dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 
@@ -36,7 +36,20 @@ app.use(
   })
 );
 
-app.use(createOAuthRouter(db, env.DASHBOARD_URL));
+app.get("/.well-known/oauth-authorization-server", (req, res) => {
+    const base = env.CLERK_FRONTEND_API_URL
+    res.json({
+      issuer: base,
+      authorization_endpoint: `${base}/oauth/authorize`,
+      token_endpoint: `${base}/oauth/token`,
+      registration_endpoint: `${base}/oauth/register`,
+      response_types_supported: ["code"],
+      grant_types_supported: [ 'authorization_code', 'refresh_token'],
+      token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
+      code_challenge_methods_supported: ["S256"]
+    });
+  });
+
 
 app.get("/healthz", (_req, res) => {
   res.status(200).send("ok");
