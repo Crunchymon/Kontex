@@ -23,7 +23,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false }));
 // Allow cross-origin requests from the dashboard host so browser-based
 // dynamic client registration can succeed (preflight OPTIONS included).
-const allowedOrigins = [env.DASHBOARD_URL];
+const allowedOrigins = [env.DASHBOARD_URL , "https://claude.ai"];
 app.use(
   cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
