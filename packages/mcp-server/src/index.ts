@@ -11,58 +11,61 @@ import { createEmbeddingClient } from "./embeddings.js";
 import { authenticate } from "./auth.js";
 import { KontexError } from "./errors.js";
 
-
 dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 
 const env = getEnv();
 const db = createDb(env.DATABASE_URL);
-const embeddings = createEmbeddingClient(env.GEMINI_API_KEY, env.EMBEDDING_MODEL);
+const embeddings = createEmbeddingClient(
+  env.GEMINI_API_KEY,
+  env.EMBEDDING_MODEL,
+);
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false }));
 // Allow cross-origin requests from the dashboard host so browser-based
 // dynamic client registration can succeed (preflight OPTIONS included).
-const allowedOrigins = [env.DASHBOARD_URL , "https://claude.ai"];
+const allowedOrigins = [env.DASHBOARD_URL, "https://claude.ai"];
 app.use(
   cors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
 );
 
 app.get("/.well-known/oauth-authorization-server", (req, res) => {
+  console.log("Received OIDC discovery request", req.headers, req.body);
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const clerkBase = env.CLERK_FRONTEND_API_URL.replace(/\/$/, "");
 
-    console.log("Received OIDC discovery request", req.headers , req.body);
-    const base = env.CLERK_FRONTEND_API_URL
-    res.json({
-      issuer: base + "/",
-      authorization_endpoint: `${base}/oauth/authorize`,
-      token_endpoint: `${base}/oauth/token`,
-      registration_endpoint: `${base}/oauth/register`,
-      response_types_supported: ["code"],
-      grant_types_supported: [ 'authorization_code', 'refresh_token'],
-      token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
-      code_challenge_methods_supported: ["S256"]
-    });
+  res.json({
+    resource: `${proto}://${host}`,
+    authorization_servers: [clerkBase],
+    scopes_supported: ["openid", "profile", "email", "offline_access"],
   });
-
+});
 
 app.get("/healthz", (_req, res) => {
   res.status(200).send("ok");
 });
 
-const connections = new Map<string, { transport: SSEServerTransport; server: McpServer }>();
+const connections = new Map<
+  string,
+  { transport: SSEServerTransport; server: McpServer }
+>();
 
 app.get("/sse", async (req: Request, res: Response) => {
+  console.log("Incoming SSE connection", req);
 
-  console.log("Incoming SSE connection" , req);
-  
   try {
     const auth = req.headers.authorization ?? req.headers.Authorization;
     const apiKey = Array.isArray(auth) ? auth[0] : auth;
@@ -81,14 +84,30 @@ app.get("/sse", async (req: Request, res: Response) => {
   } catch (err) {
     console.log("SSE connection error", err);
     if (res.headersSent) return;
+    
     if (err instanceof KontexError) {
-      res.status(err.status).json({
+      // 1. Force a strict 401 status for all authentication-related errors
+      const isAuthError = ["missing_auth", "invalid_token", "user_not_found"].includes(err.code);
+      const statusCode = isAuthError ? 401 : err.status;
+      
+      // 2. Inject the mandatory RFC 9728 header required by Claude
+      if (statusCode === 401) {
+        const host = req.headers["x-forwarded-host"] || req.headers.host;
+        const proto = req.headers["x-forwarded-proto"] || "https";
+        res.setHeader(
+          "WWW-Authenticate", 
+          `Bearer resource_metadata="${proto}://${host}/.well-known/oauth-protected-resource"`
+        );
+      }
+
+      res.status(statusCode).json({
         error: err.code,
         message: err.message,
         details: err.details ?? null
       });
       return;
     }
+    
     // eslint-disable-next-line no-console
     console.error("Unhandled SSE connect error", err);
     res.status(500).json({ error: "internal", message: "Unexpected server error" });
@@ -101,7 +120,7 @@ app.post("/message", async (req: Request, res: Response) => {
     res.status(400).send("Missing sessionId");
     return;
   }
-  
+
   const connection = connections.get(sessionId);
   if (!connection) {
     res.status(404).send("Session not found");
