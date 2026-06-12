@@ -41,17 +41,84 @@ app.use(
   }),
 );
 
-app.get("/.well-known/oauth-authorization-server", (req, res) => {
-  console.log("Received OIDC discovery request", req.headers, req.body);
+
+function logRequest(stage: string, req: Request, extra: Record<string, unknown> = {}) {
+  console.log(
+    JSON.stringify(
+      {
+        timestamp: new Date().toISOString(),
+        stage,
+        method: req.method,
+        path: req.originalUrl,
+        host: req.headers.host,
+        forwardedHost: req.headers["x-forwarded-host"],
+        forwardedProto: req.headers["x-forwarded-proto"],
+        userAgent: req.headers["user-agent"],
+        authorization: req.headers.authorization
+          ? `${req.headers.authorization.slice(0, 25)}...`
+          : null,
+        mcpProtocolVersion: req.headers["mcp-protocol-version"],
+        cfRay: req.headers["cf-ray"],
+        ip:
+          req.headers["cf-connecting-ip"] ||
+          req.headers["x-forwarded-for"] ||
+          req.ip,
+        ...extra,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+app.get("/.well-known/oauth-authorization-server", async (_req, res) => {
+  logRequest("oauth_authorization_server", _req);
+  try {
+    const clerkBase = env.CLERK_FRONTEND_API_URL.replace(/\/$/, "");
+
+    const response = await fetch(
+      `${clerkBase}/.well-known/openid-configuration`
+    );
+
+    if (!response.ok) {
+      return res.status(500).json({
+        error: "failed_to_fetch_clerk_metadata",
+      });
+    }
+
+    const metadata = await response.json();
+
+    return res.json(metadata);
+  } catch (error) {
+    console.error("OAuth discovery error", error);
+
+    return res.status(500).json({
+      error: "oauth_discovery_failed",
+    });
+  }
+});
+
+
+app.get("/.well-known/oauth-protected-resource", (req, res) => {
   const host = req.headers["x-forwarded-host"] || req.headers.host;
   const proto = req.headers["x-forwarded-proto"] || "https";
-  const clerkBase = env.CLERK_FRONTEND_API_URL.replace(/\/$/, "");
 
-  res.json({
-    resource: `${proto}://${host}`,
-    authorization_servers: [clerkBase],
-    scopes_supported: ["openid", "profile", "email", "offline_access"],
-  });
+  const payload = {
+    resource: `${proto}://${host}/sse`,
+    authorization_servers: [
+      env.CLERK_FRONTEND_API_URL.replace(/\/$/, ""),
+    ],
+    scopes_supported: [
+      "openid",
+      "profile",
+      "email",
+      "offline_access",
+    ],
+  };
+
+  logRequest("oauth_protected_resource", req, payload);
+
+  res.json(payload);
 });
 
 app.get("/healthz", (_req, res) => {
