@@ -6,7 +6,7 @@ import {
   type ProjectRole,
   type SpaceRole,
   type User,
-  users
+  users,
 } from "@kontex/shared/schema";
 import type { Database } from "./db.js";
 import { KontexError } from "./errors.js";
@@ -18,7 +18,7 @@ export type AuthContext = {
 export async function authenticate(
   db: Database,
   rawKey: string | undefined,
-  clerkSecretKey: string
+  clerkSecretKey: string,
 ): Promise<AuthContext> {
   if (!rawKey) {
     throw new KontexError("missing_auth", "Missing Authorization header");
@@ -26,12 +26,23 @@ export async function authenticate(
   const token = rawKey.replace(/^Bearer\s+/i, "").trim();
 
   let clerkUserId: string;
+
   try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString(),
+    );
+
+    console.log("JWT PAYLOAD", payload);
+    
     const verified = await verifyToken(token, {
-      secretKey: clerkSecretKey
+      secretKey: clerkSecretKey,
     });
+
+    console.log("TOKEN VERIFIED", verified);
+
     clerkUserId = verified.sub;
   } catch (err) {
+    console.error("TOKEN VERIFY FAILED", err);
     throw new KontexError("invalid_token", "Invalid or expired token");
   }
 
@@ -51,15 +62,23 @@ export async function authenticate(
 export async function requireProjectMember(
   db: Database,
   userId: string,
-  projectId: string
+  projectId: string,
 ): Promise<{ projectRole: ProjectRole }> {
   const [row] = await db
     .select({ projectRole: projectMembers.projectRole })
     .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
+    .where(
+      and(
+        eq(projectMembers.userId, userId),
+        eq(projectMembers.projectId, projectId),
+      ),
+    )
     .limit(1);
   if (!row) {
-    throw new KontexError("not_project_member", "User is not a member of this project");
+    throw new KontexError(
+      "not_project_member",
+      "User is not a member of this project",
+    );
   }
   return { projectRole: row.projectRole as ProjectRole };
 }
@@ -67,11 +86,14 @@ export async function requireProjectMember(
 export async function requireProjectAdmin(
   db: Database,
   userId: string,
-  projectId: string
+  projectId: string,
 ): Promise<{ projectRole: ProjectRole }> {
   const role = await requireProjectMember(db, userId, projectId);
   if (role.projectRole !== "admin") {
-    throw new KontexError("insufficient_role", "This action requires project admin role");
+    throw new KontexError(
+      "insufficient_role",
+      "This action requires project admin role",
+    );
   }
   return role;
 }
@@ -80,18 +102,26 @@ export async function requireSpaceMember(
   db: Database,
   userId: string,
   spaceId: string,
-  projectId: string
+  projectId: string,
 ): Promise<{ spaceRole: SpaceRole }> {
   const [row] = await db
-    .select({ spaceRole: spaceMembers.spaceRole, projectId: spaceMembers.projectId })
+    .select({
+      spaceRole: spaceMembers.spaceRole,
+      projectId: spaceMembers.projectId,
+    })
     .from(spaceMembers)
-    .where(and(eq(spaceMembers.userId, userId), eq(spaceMembers.spaceId, spaceId)))
+    .where(
+      and(eq(spaceMembers.userId, userId), eq(spaceMembers.spaceId, spaceId)),
+    )
     .limit(1);
   if (!row) {
     throw new KontexError("not_space_member", "User has no role in this space");
   }
   if (row.projectId !== projectId) {
-    throw new KontexError("not_space_member", "Space does not belong to the supplied project");
+    throw new KontexError(
+      "not_space_member",
+      "Space does not belong to the supplied project",
+    );
   }
   return { spaceRole: row.spaceRole as SpaceRole };
 }
@@ -100,12 +130,17 @@ export async function getSpaceRole(
   db: Database,
   userId: string,
   spaceId: string,
-  projectId: string
+  projectId: string,
 ): Promise<SpaceRole | null> {
   const [row] = await db
-    .select({ spaceRole: spaceMembers.spaceRole, projectId: spaceMembers.projectId })
+    .select({
+      spaceRole: spaceMembers.spaceRole,
+      projectId: spaceMembers.projectId,
+    })
     .from(spaceMembers)
-    .where(and(eq(spaceMembers.userId, userId), eq(spaceMembers.spaceId, spaceId)))
+    .where(
+      and(eq(spaceMembers.userId, userId), eq(spaceMembers.spaceId, spaceId)),
+    )
     .limit(1);
   if (!row || row.projectId !== projectId) {
     return null;
@@ -117,11 +152,14 @@ export async function requireSpaceEditor(
   db: Database,
   userId: string,
   spaceId: string,
-  projectId: string
+  projectId: string,
 ): Promise<{ spaceRole: SpaceRole }> {
   const role = await requireSpaceMember(db, userId, spaceId, projectId);
   if (role.spaceRole !== "editor") {
-    throw new KontexError("insufficient_role", "This action requires space editor role");
+    throw new KontexError(
+      "insufficient_role",
+      "This action requires space editor role",
+    );
   }
   return role;
 }
@@ -129,19 +167,7 @@ export async function requireSpaceEditor(
 export async function listUserSpacesInProject(
   db: Database,
   userId: string,
-  projectId: string
-): Promise<string[]> {
-  const rows = await db
-    .select({ spaceId: spaceMembers.spaceId })
-    .from(spaceMembers)
-    .where(and(eq(spaceMembers.userId, userId), eq(spaceMembers.projectId, projectId)));
-  return rows.map((r) => r.spaceId);
-}
-
-export async function listUserEditableSpacesInProject(
-  db: Database,
-  userId: string,
-  projectId: string
+  projectId: string,
 ): Promise<string[]> {
   const rows = await db
     .select({ spaceId: spaceMembers.spaceId })
@@ -150,8 +176,25 @@ export async function listUserEditableSpacesInProject(
       and(
         eq(spaceMembers.userId, userId),
         eq(spaceMembers.projectId, projectId),
-        eq(spaceMembers.spaceRole, "editor")
-      )
+      ),
+    );
+  return rows.map((r) => r.spaceId);
+}
+
+export async function listUserEditableSpacesInProject(
+  db: Database,
+  userId: string,
+  projectId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ spaceId: spaceMembers.spaceId })
+    .from(spaceMembers)
+    .where(
+      and(
+        eq(spaceMembers.userId, userId),
+        eq(spaceMembers.projectId, projectId),
+        eq(spaceMembers.spaceRole, "editor"),
+      ),
     );
   return rows.map((r) => r.spaceId);
 }
