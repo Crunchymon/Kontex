@@ -58,6 +58,9 @@ app.get("/healthz", (_req, res) => {
 const connections = new Map<string, { transport: SSEServerTransport; server: McpServer }>();
 
 app.get("/sse", async (req: Request, res: Response) => {
+
+  console.log("Incoming SSE connection" , req);
+  
   try {
     const auth = req.headers.authorization ?? req.headers.Authorization;
     const apiKey = Array.isArray(auth) ? auth[0] : auth;
@@ -74,6 +77,7 @@ app.get("/sse", async (req: Request, res: Response) => {
 
     await server.connect(transport);
   } catch (err) {
+    console.log("SSE connection error", err);
     if (res.headersSent) return;
     if (err instanceof KontexError) {
       res.status(err.status).json({
