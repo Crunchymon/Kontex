@@ -41,7 +41,7 @@ app.get("/.well-known/oauth-authorization-server", (req, res) => {
     console.log("Received OIDC discovery request", req.headers , req.body);
     const base = env.CLERK_FRONTEND_API_URL
     res.json({
-      issuer: base,
+      issuer: base + "/",
       authorization_endpoint: `${base}/oauth/authorize`,
       token_endpoint: `${base}/oauth/token`,
       registration_endpoint: `${base}/oauth/register`,
