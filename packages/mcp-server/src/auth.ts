@@ -1,10 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import { verifyToken } from "@clerk/backend";
 import {
   projectMembers,
   spaceMembers,
-  type ProjectRole,
-  type SpaceRole,
   type User,
   users,
 } from "@kontex/shared/schema";
@@ -18,6 +15,107 @@ interface AuthContext {
 }
 
 export type { AuthContext };
+
+async function getProjectMemberRole(db: Database, userId: string, projectId: string) {
+  const [member] = await db
+    .select({ projectRole: projectMembers.projectRole })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
+    .limit(1);
+
+  return member?.projectRole ?? null;
+}
+
+async function getSpaceMemberRole(db: Database, userId: string, spaceId: string, projectId: string) {
+  const [member] = await db
+    .select({ spaceRole: spaceMembers.spaceRole })
+    .from(spaceMembers)
+    .where(
+      and(
+        eq(spaceMembers.userId, userId),
+        eq(spaceMembers.spaceId, spaceId),
+        eq(spaceMembers.projectId, projectId)
+      )
+    )
+    .limit(1);
+
+  return member?.spaceRole ?? null;
+}
+
+export async function requireProjectMember(db: Database, userId: string, projectId: string) {
+  const projectRole = await getProjectMemberRole(db, userId, projectId);
+  if (!projectRole) {
+    throw new KontexError("not_project_member", "User is not a member of this project");
+  }
+}
+
+export async function requireProjectAdmin(db: Database, userId: string, projectId: string) {
+  const projectRole = await getProjectMemberRole(db, userId, projectId);
+  if (projectRole !== "admin") {
+    throw new KontexError("insufficient_role", "User does not have admin access to this project");
+  }
+}
+
+export async function getSpaceRole(
+  db: Database,
+  userId: string,
+  spaceId: string,
+  projectId: string
+) {
+  return getSpaceMemberRole(db, userId, spaceId, projectId);
+}
+
+export async function requireSpaceMember(
+  db: Database,
+  userId: string,
+  spaceId: string,
+  projectId: string
+) {
+  const spaceRole = await getSpaceMemberRole(db, userId, spaceId, projectId);
+  if (!spaceRole) {
+    throw new KontexError("not_space_member", "User is not a member of this space");
+  }
+}
+
+export async function requireSpaceEditor(
+  db: Database,
+  userId: string,
+  spaceId: string,
+  projectId: string
+) {
+  const spaceRole = await getSpaceMemberRole(db, userId, spaceId, projectId);
+  if (spaceRole !== "editor") {
+    throw new KontexError("insufficient_role", "User does not have editor access to this space");
+  }
+}
+
+export async function listUserSpacesInProject(db: Database, userId: string, projectId: string) {
+  const rows = await db
+    .select({ spaceId: spaceMembers.spaceId })
+    .from(spaceMembers)
+    .where(and(eq(spaceMembers.userId, userId), eq(spaceMembers.projectId, projectId)));
+
+  return rows.map((row) => row.spaceId);
+}
+
+export async function listUserEditableSpacesInProject(
+  db: Database,
+  userId: string,
+  projectId: string
+) {
+  const rows = await db
+    .select({ spaceId: spaceMembers.spaceId })
+    .from(spaceMembers)
+    .where(
+      and(
+        eq(spaceMembers.userId, userId),
+        eq(spaceMembers.projectId, projectId),
+        eq(spaceMembers.spaceRole, "editor")
+      )
+    );
+
+  return rows.map((row) => row.spaceId);
+}
 
 const CLERK_ISSUER = "https://positive-magpie-18.clerk.accounts.dev";
 
