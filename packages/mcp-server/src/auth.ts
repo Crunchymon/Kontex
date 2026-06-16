@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { createClerkClient } from "@clerk/backend";
 import {
   projectMembers,
   spaceMembers,
@@ -123,33 +124,33 @@ const JWKS = createRemoteJWKSet(
   new URL(`${CLERK_ISSUER}/.well-known/jwks.json`),
 );
 
-function getStringClaim(payload: Record<string, unknown>, keys: string[]) {
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return null;
-}
-
-function deriveUserName(payload: Record<string, unknown>) {
-  const firstName = getStringClaim(payload, ["given_name", "first_name"]);
-  const lastName = getStringClaim(payload, ["family_name", "last_name"]);
-  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+function deriveUserName(clerkUser: {
+  firstName: string | null;
+  lastName: string | null;
+  username: string | null;
+  emailAddresses: Array<{ emailAddress: string }>;
+}) {
+  const fullName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim();
 
   if (fullName) {
     return fullName;
   }
 
-  return getStringClaim(payload, ["name", "full_name"]);
+  if (clerkUser.username?.trim()) {
+    return clerkUser.username.trim();
+  }
+
+  return clerkUser.emailAddresses[0]?.emailAddress ?? null;
+}
+
+function derivePrimaryEmail(clerkUser: { emailAddresses: Array<{ emailAddress: string }> }) {
+  return clerkUser.emailAddresses[0]?.emailAddress ?? null;
 }
 
 export async function authenticate(
   db: Database,
   rawKey: string | undefined,
-  clerkSecretKey: string, // currently unused
+  clerkSecretKey: string,
 ): Promise<AuthContext> {
   if (!rawKey) {
     throw new KontexError("missing_auth", "Missing Authorization header");
@@ -191,13 +192,16 @@ export async function authenticate(
     .limit(1);
 
   if (!userRow) {
-    const email = getStringClaim(verifiedPayload, ["email", "email_address", "preferred_email"]);
-    const name = deriveUserName(verifiedPayload);
+    const clerkClient = createClerkClient({ secretKey: clerkSecretKey });
+    const clerkUser = await clerkClient.users.getUser(clerkUserId);
+
+    const email = derivePrimaryEmail(clerkUser);
+    const name = deriveUserName(clerkUser);
 
     if (!email || !name) {
       throw new KontexError(
         "user_not_found",
-        "User not found in database and token did not include enough profile data to create one"
+        "User not found in database and Clerk did not return enough profile data to create one"
       );
     }
 
