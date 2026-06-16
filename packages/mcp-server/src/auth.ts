@@ -123,6 +123,29 @@ const JWKS = createRemoteJWKSet(
   new URL(`${CLERK_ISSUER}/.well-known/jwks.json`),
 );
 
+function getStringClaim(payload: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function deriveUserName(payload: Record<string, unknown>) {
+  const firstName = getStringClaim(payload, ["given_name", "first_name"]);
+  const lastName = getStringClaim(payload, ["family_name", "last_name"]);
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+
+  if (fullName) {
+    return fullName;
+  }
+
+  return getStringClaim(payload, ["name", "full_name"]);
+}
+
 export async function authenticate(
   db: Database,
   rawKey: string | undefined,
@@ -135,6 +158,7 @@ export async function authenticate(
   const token = rawKey.replace(/^Bearer\s+/i, "").trim();
 
   let clerkUserId: string;
+  let verifiedPayload: Record<string, unknown>;
 
   try {
     const decoded = JSON.parse(
@@ -143,12 +167,13 @@ export async function authenticate(
 
     console.log("RAW TOKEN PAYLOAD", decoded);
 
-    const { payload, protectedHeader } = await jwtVerify(token, JWKS, {
+    const { payload } = await jwtVerify(token, JWKS, {
       issuer: CLERK_ISSUER,
     });
 
     console.log("VERIFIED PAYLOAD", payload);
 
+    verifiedPayload = payload as Record<string, unknown>;
     clerkUserId = String(payload.sub);
   } catch (err) {
     console.error("JWT VERIFY ERROR", {
@@ -166,11 +191,28 @@ export async function authenticate(
     .limit(1);
 
   if (!userRow) {
-    console.error("USER NOT FOUND", {
-      clerkUserId,
-    });
+    const email = getStringClaim(verifiedPayload, ["email", "email_address", "preferred_email"]);
+    const name = deriveUserName(verifiedPayload);
 
-    throw new KontexError("user_not_found", "User not found in database");
+    if (!email || !name) {
+      throw new KontexError(
+        "user_not_found",
+        "User not found in database and token did not include enough profile data to create one"
+      );
+    }
+
+    const [createdUser] = await db
+      .insert(users)
+      .values({
+        clerkId: clerkUserId,
+        email,
+        name,
+      })
+      .returning();
+
+    return {
+      user: createdUser,
+    };
   }
 
   return {
