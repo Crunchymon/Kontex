@@ -17,6 +17,8 @@ interface AuthContext {
   user: User;
 }
 
+export type { AuthContext };
+
 const CLERK_ISSUER = "https://positive-magpie-18.clerk.accounts.dev";
 
 const JWKS = createRemoteJWKSet(
