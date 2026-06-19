@@ -1,6 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { createClerkClient } from "@clerk/backend";
 import {
+  pendingInvitations,
   projectMembers,
   spaceMembers,
   type User,
@@ -118,6 +119,63 @@ export async function listUserEditableSpacesInProject(
   return rows.map((row) => row.spaceId);
 }
 
+export async function claimPendingInvitationsForEmail(
+  db: Database,
+  userId: string,
+  email: string
+) {
+  const lowered = email.trim().toLowerCase();
+  const invitations = await db
+    .select()
+    .from(pendingInvitations)
+    .where(
+      and(
+        eq(pendingInvitations.email, lowered),
+        isNull(pendingInvitations.acceptedAt),
+        isNull(pendingInvitations.revokedAt)
+      )
+    );
+
+  const now = Date.now();
+  for (const invitation of invitations) {
+    if (invitation.expiresAt && invitation.expiresAt.getTime() < now) {
+      continue;
+    }
+
+    await db
+      .insert(projectMembers)
+      .values({
+        userId,
+        projectId: invitation.projectId,
+        projectRole: invitation.projectRole
+      })
+      .onConflictDoNothing();
+
+    if (invitation.spaceId && invitation.spaceRole) {
+      await db
+        .insert(spaceMembers)
+        .values({
+          userId,
+          projectId: invitation.projectId,
+          spaceId: invitation.spaceId,
+          spaceRole: invitation.spaceRole
+        })
+        .onConflictDoUpdate({
+          target: [spaceMembers.userId, spaceMembers.spaceId],
+          set: { spaceRole: invitation.spaceRole, updatedAt: new Date() }
+        });
+    }
+
+    await db
+      .update(pendingInvitations)
+      .set({
+        acceptedAt: new Date(),
+        acceptedBy: userId
+      })
+      .where(eq(pendingInvitations.id, invitation.id));
+  }
+}
+
 const CLERK_ISSUER = "https://positive-magpie-18.clerk.accounts.dev";
 
 const JWKS = createRemoteJWKSet(
@@ -213,6 +271,8 @@ export async function authenticate(
         name,
       })
       .returning();
+
+    await claimPendingInvitationsForEmail(db, createdUser.id, email);
 
     return {
       user: createdUser,
