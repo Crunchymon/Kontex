@@ -102,7 +102,7 @@ app.get("/.well-known/oauth-authorization-server", async (_req, res) => {
 app.get("/.well-known/oauth-protected-resource", (req, res) => {
   const host = req.headers["x-forwarded-host"] || req.headers.host;
   const proto = req.headers["x-forwarded-proto"] || "https";
-
+  logRequest("oauth_protected_resource", req);
   const payload = {
     resource: `${proto}://${host}/sse`,
     authorization_servers: [

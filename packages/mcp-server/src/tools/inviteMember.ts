@@ -22,6 +22,7 @@ export async function handleInviteMember(
 ): Promise<InviteMemberResult> {
   await requireProjectAdmin(db, ctx.user.id, input.project_id);
 
+  
   return applyProjectInvite(db, ctx.user.id, {
     projectId: input.project_id,
     email: input.email.trim().toLowerCase(),
